@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  name      String?
+  role      String   @default("TENANT") // TENANT, LANDLORD, ADMIN
+  reviews   Review[]
+  createdAt DateTime @default(now())
+}
+
+model House {
+  id           String   @id @default(cuid())
+  city         String
+  district     String
+  neighborhood String
+  street       String
+  buildingNo   String
+  flatNo       String
+  
+  // Computed unique address key to prevent duplicates
+  addressKey   String   @unique 
+  
+  latitude     Float?
+  longitude    Float?
+  
+  reviews      Review[]
+  createdAt    DateTime @default(now())
+}
+
+model Review {
+  id             String   @id @default(cuid())
+  houseId        String
+  house          House    @relation(fields: [houseId], references: [id])
+  
+  authorId       String
+  author         User     @relation(fields: [authorId], references: [id])
+  
+  targetType     String   // HOUSE (review by tenant), TENANT (review by landlord)
+  
+  content        String
+  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED, FLAG_REMOVED
+  
+  // Common Ratings
+  overallRating  Int      @default(0)
+  
+  // Tenant Ratings for House/Landlord
+  humidityRating Int?
+  noiseRating    Int?
+  sunlightRating Int?
+  landlordRating Int?
+  
+  // Landlord Ratings for Tenant
+  paymentRating  Int?
+  cleanRating    Int?
+  neighborRating Int?
+  
+  isVerified     Boolean  @default(false)
+  verificationDoc String? // URL to doc
+  
+  anonId         String   // E.g., "Kiracı #A12"
+  
+  createdAt      DateTime @default(now())
+}
