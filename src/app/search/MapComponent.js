@@ -91,9 +91,20 @@ export default function MapComponent({ houses = [], center }) {
             <Popup>
               <strong>{house.title}</strong><br />
               <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{house.location}</span><br />
-              <span style={{ color: "#b4975a", fontWeight: 700 }}>
+              <span style={{ color: "#b4975a", fontWeight: 700, display: "block", marginBottom: "8px" }}>
                 ⭐ {house.rating} ({house.reviews} Yorum)
               </span>
+              <a href={`/house/${house.id}`} style={{ 
+                display: 'block', 
+                background: '#0f172a', 
+                color: 'white', 
+                padding: '4px 8px', 
+                borderRadius: '6px', 
+                textDecoration: 'none', 
+                textAlign: 'center', 
+                fontSize: '0.8rem',
+                fontWeight: 'bold'
+              }}>İncele</a>
             </Popup>
           </Marker>
         ))}

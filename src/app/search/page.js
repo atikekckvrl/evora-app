@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Search, Filter, List, Map as MapIcon, Star, ShieldCheck, ArrowRight, X } from "lucide-react";
 
 // Harita bileşenini SSR hatası almamak için dinamik olarak yüklüyoruz
@@ -24,11 +25,7 @@ export default function SearchPage() {
   const [mobileTab, setMobileTab] = useState("list"); // 'list' veya 'map'
 
   const allHouses = [
-    { id: 1, title: "Moda Modern Rezidans", location: "Kadıköy, İstanbul", rating: 4.8, reviews: 24, price: "Verified", lat: 41.0082, lng: 28.9784 },
-    { id: 2, title: "Cihangir Boğaz Manzaralı", location: "Beyoğlu, İstanbul", rating: 4.5, reviews: 18, price: "Verified", lat: 41.0120, lng: 28.9850 },
-    { id: 3, title: "Beşiktaş Merkez Daire", location: "Beşiktaş, İstanbul", rating: 4.2, reviews: 32, price: "Top Choice", lat: 41.0422, lng: 29.0074 },
-    { id: 4, title: "Manisa Merkez Yaşam Konutları", location: "Şehzadeler, Manisa", rating: 4.9, reviews: 12, price: "New Listing", lat: 38.6191, lng: 27.4289 },
-    { id: 5, title: "Yunusemre Lüks Site", location: "Yunusemre, Manisa", rating: 4.7, reviews: 5, price: "Verified", lat: 38.6140, lng: 27.3800 },
+    { id: 1, title: "Örnek Elite Konut", location: "Örnek Mah, Merkez", rating: 4.8, reviews: 24, price: "Verified", lat: 39.9207, lng: 32.8541 },
   ];
 
   const filteredHouses = allHouses.filter(house => 
@@ -106,7 +103,7 @@ export default function SearchPage() {
                   <span className="loc-text">{house.location}</span>
                   <h3>{house.title}</h3>
                   <div className="card-pro-footer">
-                    <button className="btn-small-pro">İncele</button>
+                    <Link href={`/house/${house.id}`} className="btn-small-pro" style={{textDecoration: 'none', textAlign: 'center'}}>İncele</Link>
                   </div>
                 </div>
               </div>

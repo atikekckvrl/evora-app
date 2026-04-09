@@ -1,0 +1,168 @@
+﻿node.exe : prisma:cli:bin 
+Failed to initialize the c
+ommand state: Error: ENOEN
+T: no such file or directo
+ry, open 'C:\Users\AT─░KE\
+AppData\Roaming\prisma-nod
+ejs\Config\commands.json' 
++1552ms
+At C:\Program Files\nodejs
+\npx.ps1:29 char:3
++   & $NODE_EXE $NPX_CLI_J
+S $args
++   ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (p  
+  risma:cli:bin ...s.js   
+ on' +1552ms:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+prisma:config:loadConfigFr
+omFile Config file loaded 
+in 77.42ms +1158ms
+prisma:config:loadConfigFr
+omFile No config file foun
+d in the current working d
+irectory C:\Users\AT─░KE\D
+esktop\evora-app +0ms
+prisma:getSchema Checking 
+existence of C:\Users\AT─░
+KE\Desktop\evora-app\schem
+a.prisma +81ms
+prisma:getSchema Reading s
+chema from single file C:\
+Users\AT─░KE\Desktop\evora
+-app\schema.prisma +0ms
+prisma:getSchema Checking 
+existence of C:\Users\AT─░
+KE\Desktop\evora-app\schem
+a.prisma +1ms
+prisma:getSchema Reading s
+chema from single file C:\
+Users\AT─░KE\Desktop\evora
+-app\schema.prisma +1ms
+prisma:engines binaries to
+ download schema-engine +1
+625ms
+prisma:getSchema Checking 
+existence of C:\Users\AT─░
+KE\Desktop\evora-app\prism
+a\schema.prisma +2ms
+prisma:getSchema Reading s
+chema from single file C:\
+Users\AT─░KE\Desktop\evora
+-app\prisma\schema.prisma 
++1ms
+prisma:getSchema Checking 
+existence of C:\Users\AT─░
+KE\Desktop\evora-app\prism
+a\schema.prisma +0ms
+prisma:getSchema Reading s
+chema from single file C:\
+Users\AT─░KE\Desktop\evora
+-app\prisma\schema.prisma 
++0ms
+prisma:getConfig Using get
+Config Wasm +19ms
+prisma:cli:checkpoint Erro
+r from tryToReadDataFromSc
+hema() while processing th
+e schema. This is not a fa
+tal error. It will continu
+e without the processed da
+ta. +18ms
+prisma:cli:checkpoint {
+  "name": "GetConfigError"
+} +0ms
+prisma:cli:checkpoint runC
+heckpointClientCheck(): Ex
+ecution time for getting i
+nfo: 43.493799999999965 ms
+ +1ms
+prisma:getSchema Checking 
+existence of C:\Users\AT─░
+KE\Desktop\evora-app\schem
+a.prisma +18ms
+prisma:getSchema Reading s
+chema from single file C:\
+Users\AT─░KE\Desktop\evora
+-app\schema.prisma +0ms
+prisma:getSchema Checking 
+existence of C:\Users\AT─░
+KE\Desktop\evora-app\prism
+a\schema.prisma +1ms
+prisma:getSchema Reading s
+chema from single file C:\
+Users\AT─░KE\Desktop\evora
+-app\prisma\schema.prisma 
++0ms
+Prisma schema loaded from 
+prisma\schema.prisma.
+prisma:getConfig Using get
+Config Wasm +1ms
+Error: GetConfigError: Pri
+sma schema validation - (g
+et-config wasm)
+Error code: P1012
+error: The datasource prop
+erty `url` is no longer su
+pported in schema files. M
+ove connection URLs for Mi
+grate to `prisma.config.ts
+` and pass either `adapter
+` for a direct database co
+nnection or `accelerateUrl
+` for Accelerate to the `P
+rismaClient` constructor. 
+See https://pris.ly/d/conf
+ig-datasource and https://
+pris.ly/d/prisma7-client-c
+onfig
+  -->  prisma\schema.prism
+a:10
+   | 
+ 9 |   provider = "sqlite"
+10 |   url      = env("DAT
+ABASE_URL")
+   | 
+
+Validation Error Count: 1
+[Context: getConfig]
+
+Prisma CLI Version : 7.6.0
+    at C:\Users\AT─░KE\Des
+ktop\evora-app\node_module
+s\prisma\build\index.js:20
+3:1073
+    at e.with (C:\Users\AT
+─░KE\Desktop\evora-app\nod
+e_modules\prisma\build\ind
+ex.js:163:41043)
+    at Cy (C:\Users\AT─░KE
+\Desktop\evora-app\node_mo
+dules\prisma\build\index.j
+s:203:1043)
+    at iD (C:\Users\AT─░KE
+\Desktop\evora-app\node_mo
+dules\prisma\build\index.j
+s:222:1318)
+    at Yn (C:\Users\AT─░KE
+\Desktop\evora-app\node_mo
+dules\prisma\build\index.j
+s:222:1109)
+    at async e.parse (C:\U
+sers\AT─░KE\Desktop\evora-
+app\node_modules\prisma\bu
+ild\index.js:586:285)
+    at async e.parse (C:\U
+sers\AT─░KE\Desktop\evora-
+app\node_modules\prisma\bu
+ild\index.js:1070:2319)
+    at async Znr (C:\Users
+\AT─░KE\Desktop\evora-app\
+node_modules\prisma\build\
+index.js:4703:136)
