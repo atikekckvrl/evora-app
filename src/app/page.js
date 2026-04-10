@@ -28,9 +28,9 @@ export default function Home() {
             <div className="search-professional">
               <div className="search-field">
                 <MapPin size={22} className="icon-gold" />
-                <input 
-                  type="text" 
-                  placeholder="Semt, mahalle veya sokak adı..." 
+                <input
+                  type="text"
+                  placeholder="Semt, mahalle veya sokak adı..."
                   value={searchTxt}
                   onChange={(e) => setSearchTxt(e.target.value)}
                 />
@@ -57,25 +57,25 @@ export default function Home() {
       </section>
 
       {/* HOW IT WORKS - PROFESSIONAL */}
-      <section className="section bg-soft">
+      <section id="nasil-calisir" className="section bg-soft">
         <div className="container">
           <div className="section-title-center reveal">
             <span className="gold-label">PROSES</span>
             <h2>Evora Nasıl Çalışır?</h2>
           </div>
           <div className="pro-steps-grid">
-            <div className="pro-step-card card-pro reveal" style={{animationDelay: '0.1s'}}>
-              <div className="pro-step-icon"><Search size={32}/></div>
+            <div className="pro-step-card card-pro reveal" style={{ animationDelay: '0.1s' }}>
+              <div className="pro-step-icon"><Search size={32} /></div>
               <h3>Adresi Belirle</h3>
               <p>Türkiye genelindeki binlerce kayıtlı adres arasından ilgilendiğin evi bul.</p>
             </div>
-            <div className="pro-step-card card-pro reveal" style={{animationDelay: '0.2s'}}>
-              <div className="pro-step-icon"><UserCheck size={32}/></div>
+            <div className="pro-step-card card-pro reveal" style={{ animationDelay: '0.2s' }}>
+              <div className="pro-step-icon"><UserCheck size={32} /></div>
               <h3>İncelemeleri Oku</h3>
               <p>Ev sahibi tutumundan tesisat durumuna kadar her detayı dürüstçe incele.</p>
             </div>
-            <div className="pro-step-card card-pro reveal" style={{animationDelay: '0.3s'}}>
-              <div className="pro-step-icon"><MessageSquare size={32}/></div>
+            <div className="pro-step-card card-pro reveal" style={{ animationDelay: '0.3s' }}>
+              <div className="pro-step-icon"><MessageSquare size={32} /></div>
               <h3>Deneyimini Paylaş</h3>
               <p>Kendi deneyimini anonim olarak yaz, topluluğun rehberi ol.</p>
             </div>
@@ -87,15 +87,15 @@ export default function Home() {
       <section className="section container">
         <div className="section-header-pro reveal">
           <h2>Son İncelemeler</h2>
-          <button className="pro-link">Tümünü Listeleyin <ArrowRight size={18}/></button>
+          <button className="pro-link">Tümünü Listeleyin <ArrowRight size={18} /></button>
         </div>
-        
+
         <div className="house-list-pro">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="house-item-pro reveal" style={{animationDelay: `${i*0.1}s`}}>
+            <div key={i} className="house-item-pro reveal" style={{ animationDelay: `${i * 0.1}s` }}>
               <div className="house-img-pro">
                 <div className="badge-verified">
-                  <ShieldCheck size={14}/>
+                  <ShieldCheck size={14} />
                   DOĞRULANMIŞ
                 </div>
               </div>
@@ -104,14 +104,14 @@ export default function Home() {
                 <h3>Atatürk Cd. No:45, Daire 12</h3>
                 <div className="house-rating-pro">
                   <div className="stars-fill">
-                    {[1,2,3,4,5].map(s => <Star key={s} size={14} fill={s <= 4 ? "#b4975a" : "transparent"} stroke="#b4975a" />)}
+                    {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill={s <= 4 ? "#b4975a" : "transparent"} stroke="#b4975a" />)}
                   </div>
                   <span>4.2 (8 Yorum)</span>
                 </div>
                 <p>"Binada asansör sorunu vardı ama genel olarak huzurlu..."</p>
                 <div className="house-footer-pro">
                   <span className="user-ref">Kiracı #A09</span>
-                  <button className="btn-small">Detay <ArrowRight size={14}/></button>
+                  <button className="btn-small">Detay <ArrowRight size={14} /></button>
                 </div>
               </div>
             </div>
@@ -119,7 +119,25 @@ export default function Home() {
         </div>
       </section>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      {/* ABOUT US - HAKKIMIZDA */}
+      <section id="hakkimizda" className="section bg-soft" style={{ padding: '6rem 0', background: 'white' }}>
+        <div className="container" style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto" }}>
+          <div className="section-title-center reveal">
+            <span className="gold-label">BİZ KİMİZ?</span>
+            <h2>Hakkımızda</h2>
+          </div>
+          <p style={{ fontSize: "1.1rem", color: "var(--text-muted)", lineHeight: 1.8, marginBottom: "2rem" }}>
+            Evora, Türkiye'nin ilk ve tek şeffaf emlak deneyimi platformudur. Amacımız, kiracıların ve ev sahiplerinin sürprizlerden uzak, %100 doğrulanmış yorumlar ışığında güvenli kararlar almasını sağlamaktır. Dürüstlük en büyük ilkemizdir.
+          </p>
+          <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div className="pro-badge" style={{ margin: 0 }}><ShieldCheck size={16} /> %100 Şeffaflık</div>
+            <div className="pro-badge" style={{ margin: 0 }}><UserCheck size={16} /> Doğrulanmış Kullanıcılar</div>
+          </div>
+        </div>
+      </section>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .hero-split { display: grid; grid-template-columns: 1fr 1fr; min-height: 90vh; background: #fff; }
         .hero-split-content { display: flex; align-items: center; padding: 4rem 5%; } /* Mobilde dengeleme için azaltıldı */
         .hero-info { max-width: 600px; margin: 0 auto; } /* Mobilde ortalama için */
@@ -202,37 +220,6 @@ export default function Home() {
           .section { padding: 4rem 0; }
         }
       `}} />
-
-      {/* Adding Footer to structure */}
-      <footer className="footer-pro">
-        <div className="container">
-          <div className="footer-grid">
-            <div className="footer-brand">
-              <h2>EVORA</h2>
-              <p>Türkiye'nin dürüst, şeffaf ve güvenilir kira deneyim platformu.</p>
-            </div>
-            <div className="footer-links">
-              <h4>Hızlı Linkler</h4>
-              <ul>
-                <li>Ev Ara</li>
-                <li>İnceleme Yaz</li>
-                <li>Hakkımızda</li>
-              </ul>
-            </div>
-            <div className="footer-links">
-              <h4>Yasal</h4>
-              <ul>
-                <li>KVKK</li>
-                <li>Kullanım Koşulları</li>
-                <li>Güvenlik</li>
-              </ul>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            © 2026 Evora Platform – Tüm Hakları Saklıdır.
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

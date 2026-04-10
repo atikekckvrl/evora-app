@@ -4,11 +4,11 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req) {
   try {
-    const { name, email, phone, password } = await req.json();
+    const { name, email, phone, password, userType, interests, avatarSelection, linkedInUrl, verificationDoc } = await req.json();
 
-    if (!name || (!email && !phone) || !password) {
+    if (!name || (!email && !phone) || !password || !userType) {
       return NextResponse.json(
-        { error: "Lütfen tüm zorunlu alanları doldurun." },
+        { error: "Lütfen tüm zorunlu alanları (Kullanıcı Tipi dahil) doldurun." },
         { status: 400 }
       );
     }
@@ -42,6 +42,11 @@ export async function POST(req) {
         email: email || null,
         phone: phone || null,
         password: hashedPassword,
+        userType,
+        interests: interests ? JSON.stringify(interests) : null,
+        avatarSelection: avatarSelection || null,
+        linkedInVerified: linkedInUrl ? true : false,
+        isVerified: verificationDoc ? true : false,
       },
     });
 

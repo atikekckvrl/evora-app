@@ -39,11 +39,11 @@ function NavbarContent() {
           <ShieldCheck className="logo-icon" size={28} />
           <span className="logo-text">EVORA</span>
         </Link>
-        
+
         <div className="nav-links desktop-only">
           <Link href="/search" className="nav-link">Keşfet</Link>
-          <a href="#" className="nav-link">Nasıl Çalışır?</a>
-          <a href="#" className="nav-link">Hakkımızda</a>
+          <Link href="/#nasil-calisir" className="nav-link">Nasıl Çalışır?</Link>
+          <Link href="/#hakkimizda" className="nav-link">Hakkımızda</Link>
         </div>
 
         <div className="nav-actions">
@@ -53,17 +53,17 @@ function NavbarContent() {
                 <span className="user-name-nav desktop-only">{session.user.name?.split(' ')[0]}</span>
                 <div className="user-avatar-mini">{session.user.name?.charAt(0).toUpperCase()}</div>
               </div>
-              
+
               {isMenuOpen && (
                 <div className="user-dropdown">
                   <div className="dropdown-header mobile-only">
                     <strong>{session.user.name}</strong>
                   </div>
                   <Link href="/profile" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                    <User size={16} style={{marginRight: '8px', verticalAlign: 'middle'}} /> Profilim
+                    <User size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Profilim
                   </Link>
                   <Link href="/profile" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
-                    <Heart size={16} style={{marginRight: '8px', verticalAlign: 'middle'}} /> Favorilerim
+                    <Heart size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Favorilerim
                   </Link>
                   <button onClick={() => { signOut(); setIsMenuOpen(false); }} className="dropdown-item logout-red">Çıkış Yap</button>
                 </div>
@@ -72,7 +72,7 @@ function NavbarContent() {
           ) : (
             <Link href="/login" className="btn-primary-nav login-btn-mobile">Giriş Yap</Link>
           )}
-          
+
           <Link href="/search" className="btn-primary-nav desktop-only">
             <Search size={18} />
             <span>Adres Sorgula</span>
@@ -90,21 +90,29 @@ function Footer() {
         <div className="footer-section">
           <div className="logo-section mb-1">
             <ShieldCheck className="logo-icon" />
-            <span className="logo-text">EVORA</span>
+            <span className="logo-text" style={{ color: 'white' }}>EVORA</span>
           </div>
-          <p className="text-muted">Güvenli ve şeffaf ev kiralama deneyimi.</p>
+          <p className="text-muted" style={{ color: '#94a3b8', maxWidth: '300px' }}>Türkiye'nin dürüst, şeffaf ve güvenilir kira deneyim platformu.</p>
         </div>
         <div className="footer-section">
-          <h4>Bağlantılar</h4>
+          <h4 style={{ color: 'white' }}>Hızlı Linkler</h4>
           <ul>
-            <li><a href="#">Şartlar & Koşullar</a></li>
-            <li><a href="#">Gizlilik Politikası</a></li>
-            <li><a href="#">Destek</a></li>
+            <li><Link href="/search">Ev Ara</Link></li>
+            <li><Link href="/">İnceleme Yaz</Link></li>
+            <li><Link href="/#hakkimizda">Hakkımızda</Link></li>
+          </ul>
+        </div>
+        <div className="footer-section">
+          <h4 style={{ color: 'white' }}>Yasal</h4>
+          <ul>
+            <li><Link href="/legal/kvkk">KVKK</Link></li>
+            <li><Link href="/legal/terms">Kullanım Koşulları</Link></li>
+            <li><Link href="/legal/security">Güvenlik</Link></li>
           </ul>
         </div>
       </div>
       <div className="footer-bottom">
-        <p>&copy; 2026 Evora. Tüm hakları saklıdır.</p>
+        <p>&copy; 2026 Evora Platform – Tüm Hakları Saklıdır.</p>
       </div>
     </footer>
   );
@@ -112,7 +120,8 @@ function Footer() {
 
 function GlobalStyles() {
   return (
-    <style dangerouslySetInnerHTML={{ __html: `
+    <style dangerouslySetInnerHTML={{
+      __html: `
       .navbar-wrapper {
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(15px);
@@ -287,44 +296,43 @@ function GlobalStyles() {
       }
 
       .footer-wrapper {
-        background: var(--surface);
-        border-top: 1px solid var(--border);
+        background: #0f172a;
+        color: white;
         padding: 4rem 0 2rem;
         margin-top: 4rem;
       }
-
       .footer-content {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 3rem;
         margin-bottom: 3rem;
       }
-
       .footer-section h4 {
         margin-bottom: 1rem;
+        font-weight: 800;
       }
-
       .footer-section ul {
         list-style: none;
         padding: 0;
       }
-
       .footer-section ul li {
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.75rem;
       }
-
       .footer-section ul li a {
-        color: var(--text-muted);
-        font-size: 0.875rem;
+        color: #94a3b8;
+        font-size: 0.9rem;
         text-decoration: none;
+        transition: 0.2s;
       }
-
+      .footer-section ul li a:hover {
+        color: white;
+      }
       .footer-bottom {
-        border-top: 1px solid var(--border);
+        border-top: 1px solid rgba(255,255,255,0.1);
         padding-top: 2rem;
         text-align: center;
-        font-size: 0.875rem;
-        color: var(--text-muted);
+        font-size: 0.8rem;
+        color: #64748b;
       }
 
       @media (max-width: 768px) {

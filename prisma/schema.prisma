@@ -46,6 +46,14 @@ model User {
   emailVerified DateTime?
   image         String?
   role          String    @default("TENANT")
+  
+  // Topluluk Özellikleri
+  userType      String?   // STUDENT, EMPLOYEE, FAMILY, LANDLORD
+  interests     String?   // JSON string of tags
+  isVerified    Boolean   @default(false)
+  linkedInVerified Boolean @default(false)
+  avatarSelection String?  // Avatar icon identifier
+  bio           String?
   accounts      Account[]
   sessions      Session[]
   reviews       Review[]
