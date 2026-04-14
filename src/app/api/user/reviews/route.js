@@ -21,7 +21,7 @@ export async function GET() {
 
     // Kullanıcının yorumlarını bağlı ev bilgileriyle getir
     const reviews = await prisma.review.findMany({
-      where: { userId: user.id },
+      where: { authorId: user.id },
       include: {
         house: {
           select: {

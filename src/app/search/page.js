@@ -3,75 +3,348 @@ import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Search, Filter, List, Map as MapIcon, Star, ShieldCheck, ArrowRight, X } from "lucide-react";
+import { Search, Filter, List, Map as MapIcon, Star, ShieldCheck, ArrowRight, X, MapPin } from "lucide-react";
 
 // Harita bileşenini SSR hatası almamak için dinamik olarak yüklüyoruz
 const MapContainer = dynamic(
-  () => import("./MapComponent"),
-  { 
+  () => import("../../components/Map"),
+  {
     ssr: false,
     loading: () => <div className="map-loading">Harita Yükleniyor...</div>
   }
 );
 
-export default function SearchPage() {
+const BALIKESIR_DISTRICTS = [
+  "Tüm Balıkesir", "Altıeylül", "Karesi", "Bandırma", "Edremit", "Ayvalık",
+  "Burhaniye", "Bigadiç", "Sındırgı", "Gönen", "Susurluk"
+];
+
+function SearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
-  
+
   const [viewMode, setViewMode] = useState("split");
+  const [selectedDistrict, setSelectedDistrict] = useState("Tüm Balıkesir");
   const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [mapCenter, setMapCenter] = useState([39.0, 35.0]);
-  const [mapZoom, setMapZoom] = useState(6);
+  const [mapCenter, setMapCenter] = useState([39.6484, 27.8826]); // Balıkesir Merkez
+  const [mapZoom, setMapZoom] = useState(10);
   const [mobileTab, setMobileTab] = useState("list"); // 'list' veya 'map'
+  const [allHouses, setAllHouses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const allHouses = [
-    { id: 1, title: "Örnek Elite Konut", location: "Örnek Mah, Merkez", rating: 4.8, reviews: 24, price: "Verified", lat: 39.9207, lng: 32.8541 },
-  ];
-
-  const filteredHouses = allHouses.filter(house => 
-    house.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    house.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Dinamik Şehir Bulma (Geocoding)
   useEffect(() => {
-    if (searchQuery.length > 2) {
-      const delayDebounceFn = setTimeout(async () => {
-        try {
-          // Daha spesifik bir arama için sorguyu güçlendiriyoruz
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&city=${searchQuery}&country=Turkey&limit=1`);
-          const data = await res.json();
-          if (data && data.length > 0) {
-            const newLat = parseFloat(data[0].lat);
-            const newLon = parseFloat(data[0].lon);
-            
-            if (!isNaN(newLat) && !isNaN(newLon)) {
-              setMapCenter([newLat, newLon]);
-              setMapZoom(13);
-            }
-          }
-        } catch (err) {
-          console.error("Konum bulunamadı:", err);
-        }
-      }, 400); // Gecikmeyi daha da azalttım
+    const fetchHouses = async () => {
+      try {
+        const res = await fetch("/api/houses");
+        const data = await res.json();
+        if (Array.isArray(data)) setAllHouses(data);
+      } catch (err) {
+        console.error("Evler yüklenirken hata:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchHouses();
+  }, []);
 
-      return () => clearTimeout(delayDebounceFn);
+  const filteredHouses = allHouses.filter(house => {
+    const matchDistrict = selectedDistrict === "Tüm Balıkesir" || house.location === selectedDistrict;
+    const matchText = (house.location || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (house.title || "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchDistrict && matchText;
+  });
+
+  const [tempMarker, setTempMarker] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const skipNextSearch = React.useRef(false); // seçim yapıldığında tekrar aramayı engelle
+
+  // Arama mantığı — hem debounce hem Enter'dan çağrılabilir
+  const performSearch = React.useCallback(async (query, isManual = false) => {
+    if (!query || query.length < 3) return;
+    try {
+      const district = selectedDistrict === 'Tüm Balıkesir' ? '' : selectedDistrict;
+      const city = "Balıkesir";
+
+      // Balıkesir il sınırları (viewbox: minLon,minLat,maxLon,maxLat)
+      const BALIKESIR_VIEWBOX = '26.5,38.8,28.5,40.5';
+      // Sıkı merkez Balıkesir sınırları (koordinat doğrulaması için)
+      const BAL_LAT_MIN = 38.8, BAL_LAT_MAX = 40.5;
+      const BAL_LON_MIN = 26.5, BAL_LON_MAX = 28.5;
+      const isInsideBalikesir = (lat, lon) =>
+        lat >= BAL_LAT_MIN && lat <= BAL_LAT_MAX && lon >= BAL_LON_MIN && lon <= BAL_LON_MAX;
+
+      let cleanQ = query
+        .replace(/bal[ıi]kesir/gi, '')
+        .replace(/alt[ıi]eyl[uü]l/gi, '')
+        .replace(/karesi/gi, '')
+        .replace(/edremit/gi, '')
+        .replace(/bandırma/gi, '')
+        .replace(/no\s*:\s*\d+/gi, '')
+        .replace(/no\s+\d+/gi, '')
+        .trim();
+      if (!cleanQ) return;
+
+      const streetNumberMatch = cleanQ.match(/(\d+)\s*(sokak|cadde|sk\.?|cd\.?|bulvar|blv\.?)/i);
+      const houseNumberMatch = query.match(/(?:no|numara|num|kap[ıi])\s*[:\-]?\s*(\d+)/i);
+      const hasHouseNumber = !!houseNumberMatch;
+
+      let searchUrl;
+      if (streetNumberMatch) {
+        const streetNo = streetNumberMatch[1];
+        const streetTypeRaw = streetNumberMatch[2].toLowerCase();
+        const streetType = streetTypeRaw.startsWith('sokak') || streetTypeRaw === 'sk' || streetTypeRaw === 'sk.' ? 'Sokak'
+          : streetTypeRaw.startsWith('cad') || streetTypeRaw === 'cd' || streetTypeRaw === 'cd.' ? 'Caddesi' : 'Bulvarı';
+        const formattedStreet = `${streetNo}. ${streetType}`;
+        const houseParam = hasHouseNumber ? `&housenumber=${encodeURIComponent(houseNumberMatch[1])}` : '';
+        // limit=10 ile daha fazla mahalle seçeneği çekiyoruz
+        searchUrl = `https://nominatim.openstreetmap.org/search?format=json&street=${encodeURIComponent(formattedStreet)}&city=${encodeURIComponent(city)}${district ? `&county=${encodeURIComponent(district)}` : ''}${houseParam}&viewbox=${BALIKESIR_VIEWBOX}&bounded=1&limit=10&addressdetails=1`;
+
+        const res = await fetch(searchUrl, { headers: { 'User-Agent': 'EvoraApp/1.0' } });
+        const data = await res.json();
+
+        if (data && data.length > 0) {
+          // Sadece aranan sokak numarasını içeren sonuçları kabul et ("135" içerenleri bul)
+          const exact = data.filter(r => {
+            const road = (r.address?.road || r.display_name || '').toLowerCase();
+            const lat = parseFloat(r.lat); const lon = parseFloat(r.lon);
+            return road.includes(streetNo.toLowerCase()) && isInsideBalikesir(lat, lon);
+          });
+
+          if (exact.length > 0) {
+            const formatted = exact.map(r => {
+              const road = r.address?.road || r.display_name.split(',')[0];
+              const suburb = r.address?.suburb || r.address?.neighbourhood || r.address?.quarter || '';
+              return {
+                display_name: r.display_name,
+                main_text: suburb ? `${road} — ${suburb}` : road,
+                lat: parseFloat(r.lat), lon: parseFloat(r.lon)
+              };
+            });
+
+            setSuggestions(formatted);
+            setShowSuggestions(true);
+            // Her zaman liste aç, kullanıcı seçsin — otomatik uçma yok
+          } else {
+            // Tam eşleşme yok — yanlış sokağa gitme, listeyi temizle
+            setSuggestions([]);
+            setShowSuggestions(false);
+          }
+        } else {
+          setSuggestions([]); setShowSuggestions(false);
+        }
+        return;
+      } else {
+        searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', ' + city)}&viewbox=${BALIKESIR_VIEWBOX}&bounded=1&limit=5&addressdetails=1`;
+      }
+
+      const res = await fetch(searchUrl, { headers: { 'User-Agent': 'EvoraApp/1.0' } });
+      const data = await res.json();
+
+      if (data && data.length > 0) {
+        // 1. Amenity filtresi
+        // 2. Koordinat doğrulaması — Balıkesir dışındaki sonuçları at
+        const inBounds = data.filter(r => {
+          const lat = parseFloat(r.lat); const lon = parseFloat(r.lon);
+          return isInsideBalikesir(lat, lon) && r.class !== 'amenity';
+        });
+        const results = (inBounds.length > 0 ? inBounds : data).slice(0, 5);
+        const formatted = results.map(r => ({
+          display_name: r.display_name,
+          main_text: r.address?.road || r.address?.suburb || r.display_name.split(',')[0],
+          lat: parseFloat(r.lat),
+          lon: parseFloat(r.lon)
+        }));
+
+        setSuggestions(formatted);
+        if (isManual) {
+          setShowSuggestions(false);
+          setSuggestions([]);
+        } else {
+          setShowSuggestions(true);
+        }
+
+        if (streetNumberMatch && formatted.length > 0) {
+          const top = formatted[0];
+          setMapCenter([top.lat, top.lon]);
+          // Güvenli maksimum zoom: sokak 19, bina 20
+          setMapZoom(hasHouseNumber ? 20 : 19);
+
+          setTempMarker({
+            id: 'temp',
+            title: hasHouseNumber ? `No: ${houseNumberMatch[1]} — ${top.main_text}` : top.main_text,
+            location: top.display_name,
+            lat: top.lat, lng: top.lon, isTemp: true,
+            onDrag: (newLat, newLng) => setTempMarker(prev => prev ? { ...prev, lat: newLat, lng: newLng } : null)
+          });
+        }
+      } else if (hasHouseNumber && streetNumberMatch) {
+        const streetNo = streetNumberMatch[1];
+        const streetTypeRaw = streetNumberMatch[2].toLowerCase();
+        const streetType = streetTypeRaw.startsWith('sokak') || streetTypeRaw === 'sk' ? 'Sokak'
+          : streetTypeRaw.startsWith('cad') || streetTypeRaw === 'cd' ? 'Caddesi' : 'Bulvarı';
+        const formattedStreet = `${streetNo}. ${streetType}`;
+        const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&street=${encodeURIComponent(formattedStreet)}&city=${encodeURIComponent(city)}${district ? `&county=${encodeURIComponent(district)}` : ''}&limit=1&addressdetails=1`;
+        const fallbackRes = await fetch(fallbackUrl, { headers: { 'User-Agent': 'EvoraApp/1.0' } });
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData && fallbackData.length > 0) {
+          const r = fallbackData[0];
+          const lat = parseFloat(r.lat); const lon = parseFloat(r.lon);
+          setMapCenter([lat, lon]);
+          setMapZoom(20); // Güvenli derinlik
+          setTempMarker({
+            id: 'temp',
+            title: `No: ${houseNumberMatch[1]} — ${r.address?.road || formattedStreet}`,
+            location: `${r.display_name} (Sürükleyebilirsiniz)`,
+            lat, lng: lon, isTemp: true,
+            onDrag: (newLat, newLng) => setTempMarker(prev => prev ? { ...prev, lat: newLat, lng: newLng } : null)
+          });
+          if (isManual) {
+            setSuggestions([]); setShowSuggestions(false);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Geocoding hatası:", err);
     }
-  }, [searchQuery]);
+  }, [selectedDistrict]);
+
+  // Otomatik Tamamlama - Sokak seviyesinde doğruluk
+  useEffect(() => {
+    if (skipNextSearch.current) {
+      skipNextSearch.current = false;
+      return;
+    }
+    if (!searchQuery || searchQuery.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedDistrict, performSearch]);
+
+  const handleSelectSuggestion = (s) => {
+    skipNextSearch.current = true; // Seçim sonrası aramayı engelle
+    const lat = s.lat;
+    const lon = s.lon;
+    setMapCenter([lat, lon]);
+    setMapZoom(20); // Maksimum zoom
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setSearchQuery(s.main_text + ' no:'); // Kullanıcı no: yazabilsin
+
+    setTempMarker({
+      id: 'temp',
+      title: s.main_text,
+      location: s.display_name,
+      lat,
+      lng: lon,
+      isTemp: true,
+      onDrag: (newLat, newLng) => {
+        setTempMarker(prev => prev ? { ...prev, lat: newLat, lng: newLng } : null);
+      }
+    });
+  };
+
+  // Haritaya tıklayınca iğne bırak
+  const handleMapClick = (lat, lng) => {
+    setTempMarker({
+      id: 'temp',
+      title: '📍 Seçilen Konum',
+      location: `${lat.toFixed(5)}, ${lng.toFixed(5)} — İşareti sürükleyerek ayarlayabilirsiniz`,
+      lat, lng,
+      isTemp: true,
+      onDrag: (newLat, newLng) => {
+        setTempMarker(prev => prev ? { ...prev, lat: newLat, lng: newLng } : null);
+      }
+    });
+  };
+
+  // Haritaya gönderilecek evlere geçici marker'ı ekle
+  const mapDisplayHouses = tempMarker ? [...filteredHouses, tempMarker] : filteredHouses;
+
+  // İlçe seçimine göre harita odağı
+  useEffect(() => {
+    const coords = {
+      "Edremit": [39.5961, 27.0244],
+      "Bandırma": [40.3522, 27.9767],
+      "Altıeylül": [39.6410, 27.8820],
+      "Karesi": [39.6533, 27.8924],
+      "Ayvalık": [39.3192, 26.6953],
+      "Burhaniye": [39.5020, 26.9697]
+    };
+
+    const hasSearch = searchQuery && searchQuery.length > 2;
+
+    if (selectedDistrict !== "Tüm Balıkesir" && coords[selectedDistrict]) {
+      if (!hasSearch) {
+        setMapCenter(coords[selectedDistrict]);
+        setMapZoom(13);
+      }
+    } else {
+      if (!hasSearch) {
+        setMapCenter([39.6484, 27.8826]);
+        setMapZoom(10);
+      }
+    }
+  }, [selectedDistrict, searchQuery]); // Sadece ilçe değişince veya sayfa açılınca
 
   return (
     <div className="search-layout">
       {/* ... (Header içeriği aynı) ... */}
       <header className="search-header-pro">
         <div className="container-fluid search-nav">
-          <div className="search-input-wrapper">
-            <Search size={18} className="text-gold" />
-            <input 
-              type="text" 
-              placeholder="Şehir veya semt ara (Örn: Ankara)..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="search-input-container">
+            <div className="search-input-wrapper">
+              <MapPin size={18} className="text-gold" />
+              <select
+                value={selectedDistrict}
+                onChange={(e) => setSelectedDistrict(e.target.value)}
+                style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 700, color: '#0f172a', marginRight: '10px' }}
+              >
+                {BALIKESIR_DISTRICTS.map(dist => <option key={dist} value={dist}>{dist}</option>)}
+              </select>
+              <div style={{ width: '1px', height: '24px', background: '#cbd5e1', marginRight: '10px' }}></div>
+              <Search size={18} className="text-gold" />
+              <input
+                type="text"
+                placeholder="Bina, sokak veya özellik ara..."
+                value={searchQuery}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setShowSuggestions(false);
+                    performSearch(searchQuery, true);
+                  }
+                }}
+              />
+              {searchQuery && (
+                <button className="clear-search-btn" onClick={() => { setSearchQuery(""); setTempMarker(null); setShowSuggestions(false); }}>
+                  &times;
+                </button>
+              )}
+            </div>
+
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="suggestions-dropdown-search">
+                {suggestions.map((s, idx) => (
+                  <div key={idx} className="suggestion-item-search" onClick={() => handleSelectSuggestion(s)}>
+                    <MapPin size={16} className="text-gold" />
+                    <div className="suggestion-text">
+                      <span className="suggestion-main">{s.main_text}</span>
+                      <span className="suggestion-sub">{s.display_name}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           {/* ... (Görünüm butonları aynı) ... */}
           <div className="filter-actions desktop-only">
@@ -88,7 +361,7 @@ export default function SearchPage() {
           <div className="results-panel-header">
             <h4>{filteredHouses.length > 0 ? `${filteredHouses.length} İnceleme Bulundu` : `${searchQuery} için henüz inceleme yok`}</h4>
             {filteredHouses.length === 0 && searchQuery && (
-              <p style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '5px'}}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '5px' }}>
                 Bu bölgede ilk incelemeyi sen bırakmak ister misin?
               </p>
             )}
@@ -103,7 +376,7 @@ export default function SearchPage() {
                   <span className="loc-text">{house.location}</span>
                   <h3>{house.title}</h3>
                   <div className="card-pro-footer">
-                    <Link href={`/house/${house.id}`} className="btn-small-pro" style={{textDecoration: 'none', textAlign: 'center'}}>İncele</Link>
+                    <Link href={`/house/${house.id}`} className="btn-small-pro" style={{ textDecoration: 'none', textAlign: 'center' }}>İncele</Link>
                   </div>
                 </div>
               </div>
@@ -112,7 +385,13 @@ export default function SearchPage() {
         </div>
 
         <div className="map-panel">
-          <MapContainer houses={filteredHouses} center={mapCenter} zoom={mapZoom} />
+          <div style={{
+            position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(15,23,42,0.82)', color: 'white', fontSize: '0.72rem',
+            fontWeight: 700, padding: '5px 14px', borderRadius: '100px',
+            zIndex: 999, pointerEvents: 'none', whiteSpace: 'nowrap', letterSpacing: '0.3px'
+          }}>📍 Sokak bulunamıyorsa haritaya tıklayarak konum seçin</div>
+          <MapContainer houses={mapDisplayHouses} center={mapCenter} zoom={mapZoom} onMapClick={handleMapClick} />
         </div>
       </main>
 
@@ -134,16 +413,27 @@ export default function SearchPage() {
         </button>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .search-layout { height: calc(100vh - 70px); display: flex; flex-direction: column; background: #fff; }
         
         .search-header-pro { background: white; border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; }
         .search-nav { display: flex; align-items: center; justify-content: space-between; gap: 2rem; }
         
-        .search-input-wrapper { flex: 1; max-width: 600px; display: flex; align-items: center; gap: 10px; background: var(--accent-soft); padding: 0.6rem 1.2rem; border-radius: 100px; border: 1px solid transparent; transition: 0.3s; }
+        .search-input-container { flex: 1; max-width: 600px; position: relative; }
+        .search-input-wrapper { display: flex; align-items: center; gap: 10px; background: var(--accent-soft); padding: 0.6rem 1.2rem; border-radius: 100px; border: 1px solid transparent; transition: 0.3s; }
         .search-input-wrapper:focus-within { border-color: var(--accent); background: white; box-shadow: 0 0 0 4px var(--accent-soft); }
         .search-input-wrapper input { border: none; background: transparent; outline: none; width: 100%; font-weight: 600; font-size: 0.95rem; }
         .text-gold { color: var(--accent); }
+        .clear-search-btn { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; padding: 0 0.5rem; line-height: 1; }
+
+        .suggestions-dropdown-search { position: absolute; top: calc(100% + 10px); left: 0; right: 0; background: white; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 1000; overflow: hidden; }
+        .suggestion-item-search { display: flex; align-items: center; gap: 12px; padding: 12px 20px; cursor: pointer; transition: 0.2s; border-bottom: 1px solid #f1f5f9; }
+        .suggestion-item-search:last-child { border-bottom: none; }
+        .suggestion-item-search:hover { background: #f8fafc; }
+        .suggestion-text { display: flex; flex-direction: column; overflow: hidden; }
+        .suggestion-main { font-weight: 700; font-size: 0.9rem; color: var(--primary); }
+        .suggestion-sub { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .filter-actions { display: flex; align-items: center; gap: 1rem; }
         .btn-filter-pro { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--border); padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
@@ -237,5 +527,13 @@ export default function SearchPage() {
         }
       `}} />
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <React.Suspense fallback={<div className="map-loading" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#64748b' }}>Evora Yükleniyor...</div>}>
+      <SearchContent />
+    </React.Suspense>
   );
 }

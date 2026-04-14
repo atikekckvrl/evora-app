@@ -5,6 +5,25 @@ import { Search, MapPin, Star, ShieldCheck, TrendingUp, ArrowRight, Home as Home
 
 export default function Home() {
   const [searchTxt, setSearchTxt] = useState("");
+  const [latestHouses, setLatestHouses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchLatest = async () => {
+      try {
+        const res = await fetch("/api/houses");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setLatestHouses(data.slice(0, 4));
+        }
+      } catch (err) {
+        console.error("Son incelemeler yüklenemedi:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchLatest();
+  }, []);
 
   return (
     <div className="pro-container">
@@ -87,31 +106,49 @@ export default function Home() {
       <section className="section container">
         <div className="section-header-pro reveal">
           <h2>Son İncelemeler</h2>
-          <button className="pro-link">Tümünü Listeleyin <ArrowRight size={18} /></button>
+          <Link href="/search" className="pro-link" style={{ textDecoration: 'none' }}>Tümünü Listeleyin <ArrowRight size={18} /></Link>
         </div>
 
         <div className="house-list-pro">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="house-item-pro reveal" style={{ animationDelay: `${i * 0.1}s` }}>
+          {latestHouses.length === 0 && !isLoading && (
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', background: '#f8fafc', borderRadius: '20px', border: '1px dashed var(--border)' }}>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Henüz hiç inceleme yapılmamış. İlk incelemeyi siz yapın!</p>
+              <Link href="/house/new" className="btn btn-navy" style={{ textDecoration: 'none', display: 'inline-flex', gap: '8px' }}>
+                <HomeIcon size={18} />
+                <span>Bir Ev Kaydet</span>
+              </Link>
+            </div>
+          )}
+
+          {latestHouses.map((house, i) => (
+            <div key={house.id} className="house-item-pro reveal" style={{ animationDelay: `${i * 0.1}s` }}>
               <div className="house-img-pro">
                 <div className="badge-verified">
                   <ShieldCheck size={14} />
                   DOĞRULANMIŞ
                 </div>
+                <img src="/apartman.jpg" alt="House" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div className="house-body-pro">
-                <span className="tag-location">KADIKÖY, İSTANBUL</span>
-                <h3>Atatürk Cd. No:45, Daire 12</h3>
+                <span className="tag-location">{(house.location || "Balıkesir").toUpperCase()}</span>
+                <h3>{house.title}</h3>
                 <div className="house-rating-pro">
                   <div className="stars-fill">
-                    {[1, 2, 3, 4, 5].map(s => <Star key={s} size={14} fill={s <= 4 ? "#b4975a" : "transparent"} stroke="#b4975a" />)}
+                    {[1, 2, 3, 4, 5].map(s => (
+                      <Star
+                        key={s}
+                        size={14}
+                        fill={s <= Math.round(house.rating) ? "#b4975a" : "transparent"}
+                        stroke="#b4975a"
+                      />
+                    ))}
                   </div>
-                  <span>4.2 (8 Yorum)</span>
+                  <span>{house.rating > 0 ? `${house.rating} (${house.reviews} Yorum)` : "Henüz Puanlanmamış"}</span>
                 </div>
-                <p>"Binada asansör sorunu vardı ama genel olarak huzurlu..."</p>
+                <p>Bu konut hakkında yapılan son değerlendirmeleri görmek için detayları inceleyin.</p>
                 <div className="house-footer-pro">
-                  <span className="user-ref">Kiracı #A09</span>
-                  <button className="btn-small">Detay <ArrowRight size={14} /></button>
+                  <span className="user-ref">Evora Üyesi</span>
+                  <Link href={`/house/${house.id}`} className="btn-small" style={{ textDecoration: 'none' }}>Detay <ArrowRight size={14} /></Link>
                 </div>
               </div>
             </div>

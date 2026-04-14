@@ -1,17 +1,26 @@
 "use client";
 import { useParams } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  Star, ShieldCheck, MapPin, Wind, Sun, Volume2, User, ChevronRight, 
-  MessageCircle, BedDouble, Square, Layout, ArrowUpSquare, Flame, 
+import dynamic from "next/dynamic";
+import {
+  Star, ShieldCheck, MapPin, Wind, Sun, Volume2, User, ChevronRight,
+  MessageCircle, BedDouble, Square, Layout, ArrowUpSquare, Flame,
   CheckCircle2, AlertTriangle, Info, Share2, Heart, ArrowLeft, X, Maximize2, Droplets, UserCheck, MessageSquareQuote
 } from "lucide-react";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
 
+const MapContainer = dynamic(
+  () => import("../../components/Map"),
+  {
+    ssr: false,
+    loading: () => <div className="loading-map">Harita yükleniyor...</div>
+  }
+);
+
 export default function HouseDetailsPage() {
   const params = useParams();
-  const houseId = parseInt(params.id) || 1;
+  const houseId = params.id;
   const { data: session, status } = useSession();
   const [activeImg, setActiveImg] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -28,7 +37,7 @@ export default function HouseDetailsPage() {
   const [authError, setAuthError] = useState("");
 
   const handleAuthSubmit = async (e) => {
-    if(e) e.preventDefault();
+    if (e) e.preventDefault();
     setAuthError("");
     setIsSubmitting(true);
 
@@ -71,7 +80,7 @@ export default function HouseDetailsPage() {
       setIsSubmitting(false);
     }
   };
-  
+
   // Etkileşimli Yıldız Puanlama Stateleri
   const [tRatings, setTRatings] = useState({ q1: 0, q2: 0, q3: 0, q4: 0 });
   const [lRatings, setLRatings] = useState({ q1: 0, q2: 0, q3: 0 });
@@ -82,14 +91,14 @@ export default function HouseDetailsPage() {
   // Etkileşimli Yıldız Bileşeni (Local Component)
   const InteractiveStars = ({ name, value, onChange }) => {
     return (
-      <div className="interactive-stars" style={{display: 'flex', gap: '4px'}}>
+      <div className="interactive-stars" style={{ display: 'flex', gap: '4px' }}>
         {[1, 2, 3, 4, 5].map((num) => (
-          <Star 
-            key={num} 
-            size={24} 
-            fill={num <= (hoverRating.id === name ? hoverRating.val : value) ? "#b4975a" : "transparent"} 
-            stroke={num <= (hoverRating.id === name ? hoverRating.val : value) ? "#b4975a" : "#cbd5e1"} 
-            style={{cursor: 'pointer', transition: '0.2s', transform: num <= (hoverRating.id === name ? hoverRating.val : value) ? 'scale(1.1)' : 'scale(1)'}}
+          <Star
+            key={num}
+            size={24}
+            fill={num <= (hoverRating.id === name ? hoverRating.val : value) ? "#b4975a" : "transparent"}
+            stroke={num <= (hoverRating.id === name ? hoverRating.val : value) ? "#b4975a" : "#cbd5e1"}
+            style={{ cursor: 'pointer', transition: '0.2s', transform: num <= (hoverRating.id === name ? hoverRating.val : value) ? 'scale(1.1)' : 'scale(1)' }}
             onMouseEnter={() => setHoverRating({ id: name, val: num })}
             onMouseLeave={() => setHoverRating({ id: null, val: 0 })}
             onClick={() => onChange(name, num)}
@@ -99,22 +108,33 @@ export default function HouseDetailsPage() {
     );
   };
 
-  // TEK ÖRNEK EV VERİSİ
-  const house = {
-    id: 1, 
-    title: "Örnek Elite Konut", 
-    location: "Örnek Mah, Merkez", 
-    rating: 4.8, 
-    reviews: 24, 
-    desc: "Muhteşem konumda, modern mimariyle dizayn edilmiş, ferah bir yaşam alanı sunan premium konut.",
-    images: [
-      "/apartman.jpg", 
-      "/salon.jpg", 
-      "/banyo.jpg", 
-    ]
-  };
+  const [house, setHouse] = useState({
+    id: houseId,
+    title: "Yükleniyor...",
+    location: "Yükleniyor...",
+    rating: 0,
+    reviews: 0,
+    desc: "Lütfen bekleyiniz...",
+    images: ["/apartman.jpg", "/salon.jpg", "/banyo.jpg"]
+  });
 
-  const images = house.images;
+  const [images, setImages] = useState(house.images);
+
+  useEffect(() => {
+    const fetchHouse = async () => {
+      try {
+        const res = await fetch(`/api/houses/${houseId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setHouse(data);
+          setImages(data.images);
+        }
+      } catch (err) {
+        console.error("Ev verisi çekilemedi:", err);
+      }
+    };
+    fetchHouse();
+  }, [houseId]);
 
   // Bilgisayar için navigasyon
   const nextImg = () => setActiveImg(prev => (prev + 1) % images.length);
@@ -198,10 +218,10 @@ export default function HouseDetailsPage() {
       {/* HEADER SECTION - NO OVERLAP */}
       <div className="house-local-nav">
         <div className="container nav-wrap">
-          <button onClick={() => window.history.back()} className="back-circle"><ArrowLeft size={20}/></button>
+          <button onClick={() => window.history.back()} className="back-circle"><ArrowLeft size={20} /></button>
           <div className="nav-group">
-            <button className="back-circle"><Share2 size={18}/></button>
-            <button className="back-circle"><Heart size={18}/></button>
+            <button className="back-circle"><Share2 size={18} /></button>
+            <button className="back-circle"><Heart size={18} /></button>
           </div>
         </div>
       </div>
@@ -209,32 +229,32 @@ export default function HouseDetailsPage() {
       <div className="container">
         {/* DESKTOP GALLERY GRID */}
         <section className="desktop-gallery mt-2">
-            <div className="main-stage-desktop" onClick={() => setIsLightboxOpen(true)}>
-              <img src={images[activeImg]} alt="Main" className="house-hero-img" />
-              <div className="stage-overlay">
-                <Maximize2 size={24} />
-              </div>
-              <div className="img-dots-overlay-desktop">
-                  {images.map((_, i) => <div key={i} className={`mini-dot ${i === activeImg ? 'active' : ''}`} />)}
-              </div>
+          <div className="main-stage-desktop" onClick={() => setIsLightboxOpen(true)}>
+            <img src={images[activeImg]} alt="Main" className="house-hero-img" />
+            <div className="stage-overlay">
+              <Maximize2 size={24} />
             </div>
-            <div className="side-thumbs-desktop">
-              {images.map((img, i) => (
-                <div key={i} className={`side-thumb ${i === activeImg ? 'active' : ''}`} onClick={() => setActiveImg(i)}>
-                  <img src={img} alt="Side" />
-                </div>
-              ))}
+            <div className="img-dots-overlay-desktop">
+              {images.map((_, i) => <div key={i} className={`mini-dot ${i === activeImg ? 'active' : ''}`} />)}
             </div>
+          </div>
+          <div className="side-thumbs-desktop">
+            {images.map((img, i) => (
+              <div key={i} className={`side-thumb ${i === activeImg ? 'active' : ''}`} onClick={() => setActiveImg(i)}>
+                <img src={img} alt="Side" />
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* MOBILE SCROLL GALLERY */}
         <section className="mobile-scroll-gallery" onScroll={onMobileScroll}>
-           {images.map((img, i) => (
-             <div key={i} className="mobile-slide" onClick={() => setIsLightboxOpen(true)}>
-               <img src={img} alt="slide" />
-             </div>
-           ))}
-           <div className="mobile-gallery-badge">{activeImg + 1} / {images.length}</div>
+          {images.map((img, i) => (
+            <div key={i} className="mobile-slide" onClick={() => setIsLightboxOpen(true)}>
+              <img src={img} alt="slide" />
+            </div>
+          ))}
+          <div className="mobile-gallery-badge">{activeImg + 1} / {images.length}</div>
         </section>
 
         <div className="house-layout-grid pt-3">
@@ -246,9 +266,9 @@ export default function HouseDetailsPage() {
             </div>
 
             <div className="amenities-strip mt-3">
-               <div className="am-item"><BedDouble size={20}/> 2+1 Oda</div>
-               <div className="am-item"><Square size={20}/> 95 m²</div>
-               <div className="am-item"><Droplets size={20}/> 2 Banyo</div>
+              <div className="am-item"><BedDouble size={20} /> 2+1 Oda</div>
+              <div className="am-item"><Square size={20} /> 95 m²</div>
+              <div className="am-item"><Droplets size={20} /> 2 Banyo</div>
             </div>
 
             <div className="pro-card-white mt-4">
@@ -260,114 +280,132 @@ export default function HouseDetailsPage() {
               <h3 className="card-title">Bina ve Yaşam Kalitesi Değerlendirmesi</h3>
               <div className="grid-2-col">
                 <div className="bar-item">
-                   <div className="bar-lbl">Isı İzolasyonu ve Isınma <strong style={{color:'#10b981'}}>4.5 / 5</strong></div>
-                   <div className="bar-track"><div className="bar-fill green" style={{width:'90%'}} /></div>
+                  <div className="bar-lbl">Isı İzolasyonu ve Isınma <strong style={{ color: '#10b981' }}>4.5 / 5</strong></div>
+                  <div className="bar-track"><div className="bar-fill green" style={{ width: '90%' }} /></div>
                 </div>
                 <div className="bar-item">
-                   <div className="bar-lbl">Ses Yalıtımı (Sessizlik) <strong style={{color:'#f59e0b'}}>3.0 / 5</strong></div>
-                   <div className="bar-track"><div className="bar-fill orange" style={{width:'60%'}} /></div>
+                  <div className="bar-lbl">Ses Yalıtımı (Sessizlik) <strong style={{ color: '#f59e0b' }}>3.0 / 5</strong></div>
+                  <div className="bar-track"><div className="bar-fill orange" style={{ width: '60%' }} /></div>
                 </div>
                 <div className="bar-item">
-                   <div className="bar-lbl">Bina Güvenliği ve Temizlik <strong style={{color:'#10b981'}}>4.8 / 5</strong></div>
-                   <div className="bar-track"><div className="bar-fill green" style={{width:'96%'}} /></div>
+                  <div className="bar-lbl">Bina Güvenliği ve Temizlik <strong style={{ color: '#10b981' }}>4.8 / 5</strong></div>
+                  <div className="bar-track"><div className="bar-fill green" style={{ width: '96%' }} /></div>
                 </div>
                 <div className="bar-item">
-                   <div className="bar-lbl">Toplu Taşıma ve Konum <strong style={{color:'#10b981'}}>5.0 / 5</strong></div>
-                   <div className="bar-track"><div className="bar-fill green" style={{width:'100%'}} /></div>
+                  <div className="bar-lbl">Toplu Taşıma ve Konum <strong style={{ color: '#10b981' }}>5.0 / 5</strong></div>
+                  <div className="bar-track"><div className="bar-fill green" style={{ width: '100%' }} /></div>
                 </div>
+              </div>
+            </div>
+
+            <div className="pro-card-white mt-4">
+              <h3 className="card-title">Konum</h3>
+              <div style={{ height: "400px", borderRadius: "16px", overflow: "hidden", border: "1px solid #f1f5f9" }}>
+                <MapContainer
+                  houses={[{
+                    id: house.id,
+                    title: house.title,
+                    location: house.location,
+                    lat: house.latitude,
+                    lng: house.longitude,
+                    rating: house.rating,
+                    reviews: house.reviews
+                  }]}
+                  center={house.latitude && house.longitude ? [house.latitude, house.longitude] : null}
+                />
               </div>
             </div>
 
             <div className="pro-card-white mt-4" style={{ marginBottom: "2rem" }}>
               <div className="reviews-header">
-                <h3 className="card-title" style={{margin: 0}}>Bina Hakkında Yorumlar</h3>
+                <h3 className="card-title" style={{ margin: 0 }}>Bina Hakkında Yorumlar</h3>
                 <span className="badge-count-pro">{reviews.length} Yorum</span>
               </div>
               <div className="reviews-list mt-3">
-                
+
                 {reviews.length === 0 && (
-                  <p style={{padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem'}}>
+                  <p style={{ padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
                     Henüz yorum yapılmamış. İlk yorumu sen yap!
                   </p>
                 )}
 
                 {reviews.map((rev, idx) => (
-                  <div key={idx} className="tenant-review-box" style={rev.targetType === 'TENANT' ? {borderLeft: "4px solid var(--a)", background: "#fef8ea"} : {}}>
+                  <div key={idx} className="tenant-review-box" style={rev.targetType === 'TENANT' ? { borderLeft: "4px solid var(--a)", background: "#fef8ea" } : {}}>
                     <div className="reviewer-top">
-                      <div className="reviewer-avatar" style={rev.targetType === 'TENANT' ? {background: "var(--a)", color:"white"} : {}}>
-                        {rev.targetType === 'TENANT' ? <ShieldCheck size={20}/> : <UserCheck size={20}/>}
+                      <div className="reviewer-avatar" style={rev.targetType === 'TENANT' ? { background: "var(--a)", color: "white" } : {}}>
+                        {rev.targetType === 'TENANT' ? <ShieldCheck size={20} /> : <UserCheck size={20} />}
                       </div>
                       <div className="reviewer-info">
-                         <strong>{rev.anonId}</strong>
-                         <span>{new Date(rev.createdAt).toLocaleDateString('tr-TR')} tarihinde paylaşıldı</span>
+                        <strong>{rev.anonId}</strong>
+                        <span>{new Date(rev.createdAt).toLocaleDateString('tr-TR')} tarihinde paylaşıldı</span>
                       </div>
-                      <div className="reviewer-score"><Star size={14} fill="#b4975a" stroke="none"/> {rev.overallRating}.0</div>
+                      <div className="reviewer-score"><Star size={14} fill="#b4975a" stroke="none" /> {rev.overallRating}.0</div>
                     </div>
                     <p className="review-text-pro">"{rev.content}"</p>
-                    
+
                     {rev.targetType === 'HOUSE' && (
                       <div className="review-pros-cons">
-                        <div className="pros"><CheckCircle2 size={14} color="#10b981"/> Doğrulanmış Kiracı</div>
-                        {rev.noiseRating <= 2 && <div className="cons"><AlertTriangle size={14} color="#ef4444"/> Gürültü Sorunu</div>}
+                        <div className="pros"><CheckCircle2 size={14} color="#10b981" /> Doğrulanmış Kiracı</div>
+                        {rev.noiseRating <= 2 && <div className="cons"><AlertTriangle size={14} color="#ef4444" /> Gürültü Sorunu</div>}
                       </div>
                     )}
                   </div>
                 ))}
-                
+
               </div>
             </div>
           </main>
 
           <aside className="sidebar-side">
-             <div className="sticky-box">
-                <div className="pro-trust-card">
-                   <div className="icon-wrap-top"><MessageSquareQuote size={40} color="var(--a)" strokeWidth={1.5} /></div>
-                   <h3 style={{margin: "15px 0 5px 0", fontSize: "1.2rem"}}>Bu evde yaşadın mı?</h3>
-                   <p style={{color: "#64748b", fontSize: "0.9rem", marginBottom: "20px", lineHeight: 1.5}}>
-                     Eski veya mevcut kiracıysan deneyimlerini paylaş, diğer kiracılara yol göster.
-                   </p>
-                   
-                   <div className="score-wrap" style={{borderTop: "1px solid #f1f5f9", paddingTop: "20px", marginBottom: "20px"}}>
-                     <span className="big-val">{house.rating}</span>
-                     <div className="stars-wrap">
-                        <div className="stars-row" style={{justifyContent: "center"}}>
-                          {[1,2,3,4,5].map(i => <Star key={i} size={16} fill={i<=4 ? "#b4975a" : "none"} stroke="#b4975a" />)}
-                        </div>
-                        <small>{house.reviews} Doğrulanmış Puan</small>
-                     </div>
-                   </div>
-                   
-                   <button 
-                     className="btn-primary-elite" 
-                     onClick={() => {
-                        if(status === 'authenticated') setReviewModalOpen(true);
-                        else {
-                           setAuthMode("login");
-                           setAuthModalOpen(true);
-                        }
-                     }}
-                     style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%'}}>
-                     Deneyimini Puanla
-                   </button>
-                   <p className="anon-note"><ShieldCheck size={12} style={{display: 'inline', marginBottom: '-2px'}}/> Kimliğin tamamen anonim tutulur.</p>
+            <div className="sticky-box">
+              <div className="pro-trust-card">
+                <div className="icon-wrap-top"><MessageSquareQuote size={40} color="var(--a)" strokeWidth={1.5} /></div>
+                <h3 style={{ margin: "15px 0 5px 0", fontSize: "1.2rem" }}>Bu evde yaşadın mı?</h3>
+                <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "20px", lineHeight: 1.5 }}>
+                  Eski veya mevcut kiracıysan deneyimlerini paylaş, diğer kiracılara yol göster.
+                </p>
+
+                <div className="score-wrap" style={{ borderTop: "1px solid #f1f5f9", paddingTop: "20px", marginBottom: "20px" }}>
+                  <span className="big-val">{house.rating}</span>
+                  <div className="stars-wrap">
+                    <div className="stars-row" style={{ justifyContent: "center" }}>
+                      {[1, 2, 3, 4, 5].map(i => <Star key={i} size={16} fill={i <= 4 ? "#b4975a" : "none"} stroke="#b4975a" />)}
+                    </div>
+                    <small>{house.reviews} Doğrulanmış Puan</small>
+                  </div>
                 </div>
 
-                <div className="pro-finance-card mt-3">
-                   <h4 style={{fontSize: "0.85rem", marginBottom: "12px", borderBottom: "1px solid #e2e8f0", paddingBottom: "8px"}}>Son Kiracı Bildirimleri</h4>
-                   <div className="fin-grid">
-                      <div className="fin-box"><small>Ortalama Aidat</small><strong>750 TL</strong></div>
-                      <div className="fin-box"><small>Talep Edilen Depozito</small><strong>2 Kira</strong></div>
-                   </div>
+                <button
+                  className="btn-primary-elite"
+                  onClick={() => {
+                    if (status === 'authenticated') setReviewModalOpen(true);
+                    else {
+                      setAuthMode("login");
+                      setAuthModalOpen(true);
+                    }
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%' }}>
+                  Deneyimini Puanla
+                </button>
+                <p className="anon-note"><ShieldCheck size={12} style={{ display: 'inline', marginBottom: '-2px' }} /> Kimliğin tamamen anonim tutulur.</p>
+              </div>
+
+              <div className="pro-finance-card mt-3">
+                <h4 style={{ fontSize: "0.85rem", marginBottom: "12px", borderBottom: "1px solid #e2e8f0", paddingBottom: "8px" }}>Son Kiracı Bildirimleri</h4>
+                <div className="fin-grid">
+                  <div className="fin-box"><small>Ortalama Aidat</small><strong>750 TL</strong></div>
+                  <div className="fin-box"><small>Talep Edilen Depozito</small><strong>2 Kira</strong></div>
                 </div>
-             </div>
+              </div>
+            </div>
           </aside>
         </div>
       </div>
 
       {isLightboxOpen && (
         <div className="pro-lightbox" onClick={() => setIsLightboxOpen(false)}>
-          <button className="lb-close" onClick={() => setIsLightboxOpen(false)}><X size={36}/></button>
-          
+          <button className="lb-close" onClick={() => setIsLightboxOpen(false)}><X size={36} /></button>
+
           {/* Masaüstü Okları */}
           <button className="lb-nav-btn lb-prev desktop-only" onClick={(e) => { e.stopPropagation(); prevImg(); }}>‹</button>
           <button className="lb-nav-btn lb-next desktop-only" onClick={(e) => { e.stopPropagation(); nextImg(); }}>›</button>
@@ -382,89 +420,89 @@ export default function HouseDetailsPage() {
       {/* AUTH (GİRİŞ / KAYIT) MODALI */}
       {isAuthModalOpen && (
         <div className="review-modal-overlay" onClick={() => setAuthModalOpen(false)}>
-          <div className="review-modal-content" style={{maxWidth: '450px'}} onClick={(e) => e.stopPropagation()}>
-             <div className="modal-header">
-                <h2>{authMode === 'login' ? 'Giriş Yap' : 'Hesap Oluştur'}</h2>
-                <button className="close-btn" onClick={() => setAuthModalOpen(false)}><X size={24}/></button>
-             </div>
-             
-             <p style={{fontSize: '0.9rem', color: '#64748b', marginBottom: '1.5rem', textAlign: 'center'}}>
-                {authMode === 'login' 
-                  ? 'Yorum yapmak ve topluluğa katılmak için giriş yapmalısın.' 
-                  : 'Gerçek kimliğini doğrulamak için kayıt olmalısın (Daima anonim kalırsın).'}
-             </p>
+          <div className="review-modal-content" style={{ maxWidth: '450px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{authMode === 'login' ? 'Giriş Yap' : 'Hesap Oluştur'}</h2>
+              <button className="close-btn" onClick={() => setAuthModalOpen(false)}><X size={24} /></button>
+            </div>
 
-             <div className="auth-form" style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
-                <button 
-                  className="google-btn-pro"
-                  type="button"
-                  onClick={() => signIn('google')}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" style={{marginRight: '8px'}}>
-                    <path fill="#EA4335" d="M24 12.25c0-.82-.07-1.61-.21-2.38H12v4.5h6.75c-.32 1.58-1.24 2.91-2.61 3.82v3.17h4.22c2.47-2.27 3.89-5.61 3.89-9.11z"/>
-                    <path fill="#4285F4" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-4.22-3.17c-1.14.77-2.59 1.23-3.71 1.23-3.08 0-5.69-2.08-6.62-4.88H1.1v3.28C3.11 20.89 7.23 24 12 24z"/>
-                    <path fill="#FBBC05" d="M5.38 14.27c-.24-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.45H1.1C.4 7.84 0 9.38 0 11s.4 3.16 1.1 4.55l4.28-3.28z"/>
-                    <path fill="#34A853" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.08 15.24 0 12 0 7.23 0 3.11 3.11 1.1 7.27l4.28 3.28c.93-2.81 3.54-4.88 6.62-4.88z"/>
-                  </svg>
-                  Google ile {authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol'}
-                </button>
+            <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1.5rem', textAlign: 'center' }}>
+              {authMode === 'login'
+                ? 'Yorum yapmak ve topluluğa katılmak için giriş yapmalısın.'
+                : 'Gerçek kimliğini doğrulamak için kayıt olmalısın (Daima anonim kalırsın).'}
+            </p>
 
-                <div className="auth-divider">
-                  <span>veya</span>
+            <div className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <button
+                className="google-btn-pro"
+                type="button"
+                onClick={() => signIn('google')}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" style={{ marginRight: '8px' }}>
+                  <path fill="#EA4335" d="M24 12.25c0-.82-.07-1.61-.21-2.38H12v4.5h6.75c-.32 1.58-1.24 2.91-2.61 3.82v3.17h4.22c2.47-2.27 3.89-5.61 3.89-9.11z" />
+                  <path fill="#4285F4" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-4.22-3.17c-1.14.77-2.59 1.23-3.71 1.23-3.08 0-5.69-2.08-6.62-4.88H1.1v3.28C3.11 20.89 7.23 24 12 24z" />
+                  <path fill="#FBBC05" d="M5.38 14.27c-.24-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.45H1.1C.4 7.84 0 9.38 0 11s.4 3.16 1.1 4.55l4.28-3.28z" />
+                  <path fill="#34A853" d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.08 15.24 0 12 0 7.23 0 3.11 3.11 1.1 7.27l4.28 3.28c.93-2.81 3.54-4.88 6.62-4.88z" />
+                </svg>
+                Google ile {authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol'}
+              </button>
+
+              <div className="auth-divider">
+                <span>veya</span>
+              </div>
+
+              {authError && (
+                <div style={{ color: '#ef4444', backgroundColor: '#fee2e2', padding: '10px', borderRadius: '8px', fontSize: '0.85rem', textAlign: 'center' }}>
+                  {authError}
                 </div>
-                
-                {authError && (
-                  <div style={{color: '#ef4444', backgroundColor: '#fee2e2', padding: '10px', borderRadius: '8px', fontSize: '0.85rem', textAlign: 'center'}}>
-                    {authError}
-                  </div>
-                )}
-                {authMode === 'register' && (
-                   <div className="input-group-pro">
-                      <label>Ad Soyad</label>
-                      <input 
-                        type="text" 
-                        placeholder="Adınız ve Soyadınız" 
-                        value={authForm.name}
-                        onChange={(e) => setAuthForm({...authForm, name: e.target.value})}
-                      />
-                   </div>
-                )}
+              )}
+              {authMode === 'register' && (
                 <div className="input-group-pro">
-                   <label>E-posta Adresi</label>
-                   <input 
-                    type="email" 
-                    placeholder="ornek@mail.com" 
-                    value={authForm.email}
-                    onChange={(e) => setAuthForm({...authForm, email: e.target.value})}
-                   />
+                  <label>Ad Soyad</label>
+                  <input
+                    type="text"
+                    placeholder="Adınız ve Soyadınız"
+                    value={authForm.name}
+                    onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                  />
                 </div>
-                <div className="input-group-pro">
-                   <label>Şifre</label>
-                   <input 
-                    type="password" 
-                    placeholder="••••••••" 
-                    value={authForm.password}
-                    onChange={(e) => setAuthForm({...authForm, password: e.target.value})}
-                   />
-                </div>
+              )}
+              <div className="input-group-pro">
+                <label>E-posta Adresi</label>
+                <input
+                  type="email"
+                  placeholder="ornek@mail.com"
+                  value={authForm.email}
+                  onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                />
+              </div>
+              <div className="input-group-pro">
+                <label>Şifre</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={authForm.password}
+                  onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                />
+              </div>
 
-                <button 
-                  className="submit-review-btn" 
-                  style={{marginTop: '10px'}}
-                  onClick={handleAuthSubmit}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'İşleniyor...' : (authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol')}
-                </button>
-             </div>
+              <button
+                className="submit-review-btn"
+                style={{ marginTop: '10px' }}
+                onClick={handleAuthSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'İşleniyor...' : (authMode === 'login' ? 'Giriş Yap' : 'Kayıt Ol')}
+              </button>
+            </div>
 
-             <div className="auth-footer" style={{marginTop: '20px', textAlign: 'center', fontSize: '0.85rem'}}>
-                {authMode === 'login' ? (
-                   <p>Hesabın yok mu? <span onClick={() => setAuthMode('register')} style={{color: 'var(--a)', fontWeight: 'bold', cursor: 'pointer'}}>Kayıt Ol</span></p>
-                ) : (
-                   <p>Zaten üye misin? <span onClick={() => setAuthMode('login')} style={{color: 'var(--a)', fontWeight: 'bold', cursor: 'pointer'}}>Giriş Yap</span></p>
-                )}
-             </div>
+            <div className="auth-footer" style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.85rem' }}>
+              {authMode === 'login' ? (
+                <p>Hesabın yok mu? <span onClick={() => setAuthMode('register')} style={{ color: 'var(--a)', fontWeight: 'bold', cursor: 'pointer' }}>Kayıt Ol</span></p>
+              ) : (
+                <p>Zaten üye misin? <span onClick={() => setAuthMode('login')} style={{ color: 'var(--a)', fontWeight: 'bold', cursor: 'pointer' }}>Giriş Yap</span></p>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -473,96 +511,97 @@ export default function HouseDetailsPage() {
       {isReviewModalOpen && (
         <div className="review-modal-overlay" onClick={() => setReviewModalOpen(false)}>
           <div className="review-modal-content" onClick={(e) => e.stopPropagation()}>
-             <div className="modal-header">
-                <h2>Deneyimini Paylaş</h2>
-                <button className="close-btn" onClick={() => setReviewModalOpen(false)}><X size={24}/></button>
-             </div>
-             
-             <div className="role-selector">
-                <button 
-                  className={`role-btn ${reviewRole === 'tenant' ? 'active' : ''}`}
-                  onClick={() => setReviewRole('tenant')}
-                >
-                  Oturduğum Evi Puanlıyorum
-                </button>
-                <button 
-                  className={`role-btn ${reviewRole === 'landlord' ? 'active' : ''}`}
-                  onClick={() => setReviewRole('landlord')}
-                >
-                  Kiracımı Puanlıyorum
-                </button>
-             </div>
+            <div className="modal-header">
+              <h2>Deneyimini Paylaş</h2>
+              <button className="close-btn" onClick={() => setReviewModalOpen(false)}><X size={24} /></button>
+            </div>
 
-             <div className="anon-warning">
-                <ShieldCheck size={20} color="#10b981"/>
-                <div>
-                  <strong>Kimliğin Gizli Kalacak</strong>
-                  <p>Yorumun sistemde {reviewRole === 'tenant' ? '"Kiracı #A12"' : '"Ev Sahibi #B45"'} olarak görünecek. Amacımız adil ve güvenli bir bilgi ağı kurmak.</p>
-                </div>
-             </div>
+            <div className="role-selector">
+              <button
+                className={`role-btn ${reviewRole === 'tenant' ? 'active' : ''}`}
+                onClick={() => setReviewRole('tenant')}
+              >
+                Oturduğum Evi Puanlıyorum
+              </button>
+              <button
+                className={`role-btn ${reviewRole === 'landlord' ? 'active' : ''}`}
+                onClick={() => setReviewRole('landlord')}
+              >
+                Kiracımı Puanlıyorum
+              </button>
+            </div>
 
-             <div className="rating-questions">
-                {reviewRole === 'tenant' ? (
-                  <>
-                    <div className="q-row">
-                      <span>Rutubet ve İzolasyon Sorunu Yaşadın mı?</span> 
-                      <InteractiveStars name="q1" value={tRatings.q1} onChange={(k,v) => setTRatings(p => ({...p, [k]: v}))} />
-                    </div>
-                    <div className="q-row">
-                      <span>Evin Güneş Alma Durumu Nasıldı?</span> 
-                      <InteractiveStars name="q2" value={tRatings.q2} onChange={(k,v) => setTRatings(p => ({...p, [k]: v}))} />
-                    </div>
-                    <div className="q-row">
-                      <span>Gürültü Seviyesi (Yan ve Alt Komşular)</span> 
-                      <InteractiveStars name="q3" value={tRatings.q3} onChange={(k,v) => setTRatings(p => ({...p, [k]: v}))} />
-                    </div>
-                    <div className="q-row">
-                      <span>Ev Sahibi İletişimi Nasıldı?</span> 
-                      <InteractiveStars name="q4" value={tRatings.q4} onChange={(k,v) => setTRatings(p => ({...p, [k]: v}))} />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="q-row">
-                      <span>Kira Düzenli Ödendi mi?</span> 
-                      <InteractiveStars name="l_q1" value={lRatings.q1} onChange={(k,v) => setLRatings(p => ({...p, q1: v}))} />
-                    </div>
-                    <div className="q-row">
-                      <span>Ev Temiz Kullanıldı mı?</span> 
-                      <InteractiveStars name="l_q2" value={lRatings.q2} onChange={(k,v) => setLRatings(p => ({...p, q2: v}))} />
-                    </div>
-                    <div className="q-row">
-                      <span>Komşularla Sorun Yaşandı mı?</span> 
-                      <InteractiveStars name="l_q3" value={lRatings.q3} onChange={(k,v) => setLRatings(p => ({...p, q3: v}))} />
-                    </div>
-                  </>
-                )}
-             </div>
+            <div className="anon-warning">
+              <ShieldCheck size={20} color="#10b981" />
+              <div>
+                <strong>Kimliğin Gizli Kalacak</strong>
+                <p>Yorumun sistemde {reviewRole === 'tenant' ? '"Kiracı #A12"' : '"Ev Sahibi #B45"'} olarak görünecek. Amacımız adil ve güvenli bir bilgi ağı kurmak.</p>
+              </div>
+            </div>
 
-             <div className="review-text-area">
-               <label>Eklemek İstediklerin (Zorunlu Değil)</label>
-               <textarea 
-                 value={comment}
-                 onChange={(e) => setComment(e.target.value)}
-                 placeholder={reviewRole === 'tenant' ? "Örn: Ev sahibi Mert Bey çok ilgiliydi ama kombi sürekli arıza yapıyordu..." : "Örn: Ödemeler hep gecikti ve duvarlara zarar verilmiş..."}
-               ></textarea>
-             </div>
+            <div className="rating-questions">
+              {reviewRole === 'tenant' ? (
+                <>
+                  <div className="q-row">
+                    <span>Rutubet ve İzolasyon Sorunu Yaşadın mı?</span>
+                    <InteractiveStars name="q1" value={tRatings.q1} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
+                  </div>
+                  <div className="q-row">
+                    <span>Evin Güneş Alma Durumu Nasıldı?</span>
+                    <InteractiveStars name="q2" value={tRatings.q2} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
+                  </div>
+                  <div className="q-row">
+                    <span>Gürültü Seviyesi (Yan ve Alt Komşular)</span>
+                    <InteractiveStars name="q3" value={tRatings.q3} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
+                  </div>
+                  <div className="q-row">
+                    <span>Ev Sahibi İletişimi Nasıldı?</span>
+                    <InteractiveStars name="q4" value={tRatings.q4} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="q-row">
+                    <span>Kira Düzenli Ödendi mi?</span>
+                    <InteractiveStars name="l_q1" value={lRatings.q1} onChange={(k, v) => setLRatings(p => ({ ...p, q1: v }))} />
+                  </div>
+                  <div className="q-row">
+                    <span>Ev Temiz Kullanıldı mı?</span>
+                    <InteractiveStars name="l_q2" value={lRatings.q2} onChange={(k, v) => setLRatings(p => ({ ...p, q2: v }))} />
+                  </div>
+                  <div className="q-row">
+                    <span>Komşularla Sorun Yaşandı mı?</span>
+                    <InteractiveStars name="l_q3" value={lRatings.q3} onChange={(k, v) => setLRatings(p => ({ ...p, q3: v }))} />
+                  </div>
+                </>
+              )}
+            </div>
 
-             <div className="modal-footer">
-               <p className="terms-text">Gönder'e basarak Topluluk Kurallarını ve iftira/yanıltıcı beyan paylaşmadığını kabul etmiş olursun.</p>
-               <button 
-                 className="submit-review-btn" 
-                 disabled={isSubmitting}
-                 onClick={submitReview}
-               >
-                 {isSubmitting ? "Gönderiliyor..." : "Yorumu Gönder"}
-               </button>
-             </div>
+            <div className="review-text-area">
+              <label>Eklemek İstediklerin (Zorunlu Değil)</label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder={reviewRole === 'tenant' ? "Örn: Ev sahibi Mert Bey çok ilgiliydi ama kombi sürekli arıza yapıyordu..." : "Örn: Ödemeler hep gecikti ve duvarlara zarar verilmiş..."}
+              ></textarea>
+            </div>
+
+            <div className="modal-footer">
+              <p className="terms-text">Gönder'e basarak Topluluk Kurallarını ve iftira/yanıltıcı beyan paylaşmadığını kabul etmiş olursun.</p>
+              <button
+                className="submit-review-btn"
+                disabled={isSubmitting}
+                onClick={submitReview}
+              >
+                {isSubmitting ? "Gönderiliyor..." : "Yorumu Gönder"}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         :root { --p: #0f172a; --a: #b4975a; --bg: #ffffff; --s: #f8fafc; }
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Outfit', 'Inter', sans-serif; background: white; color: var(--p); -webkit-font-smoothing: antialiased; }

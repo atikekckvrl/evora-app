@@ -134,3 +134,14 @@ model Review {
   
   createdAt      DateTime @default(now())
 }
+
+model CustomStreet {
+  id           String   @id @default(cuid())
+  name         String   // "135. Sokak"
+  neighborhood String?  // "Gaziosmanpaşa"
+  district     String?  // "Altıeylül"
+  city         String   @default("Balıkesir")
+  lat          Float
+  lng          Float
+  createdAt    DateTime @default(now())
+}

@@ -16,10 +16,24 @@ export default function NewHousePage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Ev Kayıt Verisi:", formData);
-    alert("Ev başarıyla kaydedildi (Simülasyon). Şimdi yorum yapabilirsiniz!");
+    try {
+      const res = await fetch("/api/houses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (data.id) {
+        alert("Ev sisteme eklendi/bulundu. İnceleme sayfasına yönlendiriliyorsunuz.");
+        window.location.href = `/house/${data.id}`;
+      } else {
+        alert(data.error || "Ev kaydedilirken bir hata oluştu.");
+      }
+    } catch (err) {
+      alert("Sunucuya bağlanılamadı.");
+    }
   };
 
   return (

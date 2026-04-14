@@ -6,43 +6,37 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ success: false, error: "Yetkisiz işlem. Lütfen giriş yapın." }, { status: 401 });
     }
 
     const body = await req.json();
-    const { 
-      houseId, 
-      role, 
-      ratings, 
-      comment 
+    const {
+      houseId,
+      role,
+      ratings,
+      comment
     } = body;
 
-    // Evi bul veya oluştur (Test için)
     let house = await prisma.house.findUnique({
-      where: { id: houseId.toString() }
+      where: { id: houseId }
     });
 
     if (!house) {
-      house = await prisma.house.create({
-        data: {
-          id: houseId.toString(),
-          city: "İstanbul",
-          district: "Merkez",
-          neighborhood: "Örnek",
-          street: "Deneme",
-          buildingNo: "1",
-          flatNo: "1",
-          addressKey: `test-house-${houseId}`
-        }
-      });
+      return NextResponse.json({ success: false, error: "İnceleme yapmaya çalıştığınız ev sistemde bulunamadı." }, { status: 404 });
     }
 
     // Anonim ID oluştur (Örn: Kiracı #A12)
-    const anonId = role === 'tenant' 
-      ? `Kiracı #${Math.random().toString(36).substring(2, 5).toUpperCase()}` 
+    const anonId = role === 'tenant'
+      ? `Kiracı #${Math.random().toString(36).substring(2, 5).toUpperCase()}`
       : `Ev Sahibi #${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+
+    // Calculate overall rating from standard ratings
+    const ratingValues = Object.values(ratings).filter(v => v > 0);
+    const overallRating = ratingValues.length > 0
+      ? Math.round(ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length)
+      : 0;
 
     // Yorumu kaydet
     const review = await prisma.review.create({
@@ -53,14 +47,14 @@ export async function POST(req) {
         content: comment || "",
         anonId: anonId,
         status: "APPROVED",
-        overallRating: 4,
-        
+        overallRating: overallRating,
+
         // Tenant Ratings
         humidityRating: ratings.q1 || null,
         sunlightRating: ratings.q2 || null,
         noiseRating: ratings.q3 || null,
         landlordRating: ratings.q4 || null,
-        
+
         // Landlord Ratings
         paymentRating: ratings.l_q1 || null,
         cleanRating: ratings.l_q2 || null,
@@ -85,7 +79,7 @@ export async function GET(req) {
     }
 
     const reviews = await prisma.review.findMany({
-      where: { houseId: houseId.toString() },
+      where: { houseId: houseId },
       orderBy: { createdAt: 'desc' }
     });
 
