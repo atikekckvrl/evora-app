@@ -14,9 +14,13 @@ const MapContainer = dynamic(
   }
 );
 
-const BALIKESIR_DISTRICTS = [
-  "Tüm Balıkesir", "Altıeylül", "Karesi", "Bandırma", "Edremit", "Ayvalık",
-  "Burhaniye", "Bigadiç", "Sındırgı", "Gönen", "Susurluk"
+const ALTIEYLUL_MAHALLELER = [
+  "Tüm Mahalleler",
+  ...[
+    "Bahçelievler", "Plevne", "Hasan Basri Çantay", "Gümüşçeşme",
+    "Gündoğan", "Dinkçiler", "Kasaplar", "Yıldız", "Sütlüce",
+    "Altıeylül", "Gaziosmanpaşa", "Çınarlıdere", "Aslıhantepe"
+  ].sort()
 ];
 
 function SearchContent() {
@@ -24,10 +28,10 @@ function SearchContent() {
   const initialQuery = searchParams.get("q") || "";
 
   const [viewMode, setViewMode] = useState("split");
-  const [selectedDistrict, setSelectedDistrict] = useState("Tüm Balıkesir");
   const [searchQuery, setSearchQuery] = useState(initialQuery);
-  const [mapCenter, setMapCenter] = useState([39.6484, 27.8826]); // Balıkesir Merkez
-  const [mapZoom, setMapZoom] = useState(10);
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState("Tüm Mahalleler");
+  const [mapCenter, setMapCenter] = useState([39.6410, 27.8820]); // Altıeylül Merkez
+  const [mapZoom, setMapZoom] = useState(13);
   const [mobileTab, setMobileTab] = useState("list"); // 'list' veya 'map'
   const [allHouses, setAllHouses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,10 +52,13 @@ function SearchContent() {
   }, []);
 
   const filteredHouses = allHouses.filter(house => {
-    const matchDistrict = selectedDistrict === "Tüm Balıkesir" || house.location === selectedDistrict;
+    const matchDistrict = (house.location === "Altıeylül" || house.district === "Altıeylül");
+    const matchNh = selectedNeighborhood === "Tüm Mahalleler" || house.neighborhood === selectedNeighborhood;
     const matchText = (house.location || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (house.neighborhood || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (house.street || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (house.title || "").toLowerCase().includes(searchQuery.toLowerCase());
-    return matchDistrict && matchText;
+    return matchDistrict && matchNh && matchText;
   });
 
   const [tempMarker, setTempMarker] = useState(null);
@@ -63,8 +70,9 @@ function SearchContent() {
   const performSearch = React.useCallback(async (query, isManual = false) => {
     if (!query || query.length < 3) return;
     try {
-      const district = selectedDistrict === 'Tüm Balıkesir' ? '' : selectedDistrict;
+      const district = "Altıeylül";
       const city = "Balıkesir";
+      const nhQuery = selectedNeighborhood !== "Tüm Mahalleler" ? `, ${selectedNeighborhood}` : '';
 
       // Balıkesir il sınırları (viewbox: minLon,minLat,maxLon,maxLat)
       const BALIKESIR_VIEWBOX = '26.5,38.8,28.5,40.5';
@@ -135,7 +143,7 @@ function SearchContent() {
         }
         return;
       } else {
-        searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', ' + city)}&viewbox=${BALIKESIR_VIEWBOX}&bounded=1&limit=5&addressdetails=1`;
+        searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + nhQuery + ', ' + district + ', ' + city)}&viewbox=${BALIKESIR_VIEWBOX}&bounded=1&limit=5&addressdetails=1`;
       }
 
       const res = await fetch(searchUrl, { headers: { 'User-Agent': 'EvoraApp/1.0' } });
@@ -207,7 +215,7 @@ function SearchContent() {
     } catch (err) {
       console.error("Geocoding hatası:", err);
     }
-  }, [selectedDistrict]);
+  }, [selectedNeighborhood]);
 
   // Otomatik Tamamlama - Sokak seviyesinde doğruluk
   useEffect(() => {
@@ -226,7 +234,7 @@ function SearchContent() {
     }, 700);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedDistrict, performSearch]);
+  }, [searchQuery, selectedNeighborhood, performSearch]);
 
   const handleSelectSuggestion = (s) => {
     skipNextSearch.current = true; // Seçim sonrası aramayı engelle
@@ -268,31 +276,14 @@ function SearchContent() {
   // Haritaya gönderilecek evlere geçici marker'ı ekle
   const mapDisplayHouses = tempMarker ? [...filteredHouses, tempMarker] : filteredHouses;
 
-  // İlçe seçimine göre harita odağı
+  // Harita odağı arama yoksa varsayılan Altıeylül merkeze sabit kalır
   useEffect(() => {
-    const coords = {
-      "Edremit": [39.5961, 27.0244],
-      "Bandırma": [40.3522, 27.9767],
-      "Altıeylül": [39.6410, 27.8820],
-      "Karesi": [39.6533, 27.8924],
-      "Ayvalık": [39.3192, 26.6953],
-      "Burhaniye": [39.5020, 26.9697]
-    };
-
     const hasSearch = searchQuery && searchQuery.length > 2;
-
-    if (selectedDistrict !== "Tüm Balıkesir" && coords[selectedDistrict]) {
-      if (!hasSearch) {
-        setMapCenter(coords[selectedDistrict]);
-        setMapZoom(13);
-      }
-    } else {
-      if (!hasSearch) {
-        setMapCenter([39.6484, 27.8826]);
-        setMapZoom(10);
-      }
+    if (!hasSearch) {
+      setMapCenter([39.6410, 27.8820]);
+      setMapZoom(13);
     }
-  }, [selectedDistrict, searchQuery]); // Sadece ilçe değişince veya sayfa açılınca
+  }, [searchQuery]);
 
   return (
     <div className="search-layout">
@@ -302,12 +293,14 @@ function SearchContent() {
           <div className="search-input-container">
             <div className="search-input-wrapper">
               <MapPin size={18} className="text-gold" />
+              <div style={{ fontWeight: 800, color: '#0f172a', marginRight: '5px', fontSize: '0.95rem' }}>Altıeylül</div>
+              <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 5px' }}></div>
               <select
-                value={selectedDistrict}
-                onChange={(e) => setSelectedDistrict(e.target.value)}
-                style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 700, color: '#0f172a', marginRight: '10px' }}
+                value={selectedNeighborhood}
+                onChange={(e) => setSelectedNeighborhood(e.target.value)}
+                style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#0f172a', marginRight: '5px', maxWidth: '150px', cursor: 'pointer' }}
               >
-                {BALIKESIR_DISTRICTS.map(dist => <option key={dist} value={dist}>{dist}</option>)}
+                {ALTIEYLUL_MAHALLELER.map(nh => <option key={nh} value={nh}>{nh}</option>)}
               </select>
               <div style={{ width: '1px', height: '24px', background: '#cbd5e1', marginRight: '10px' }}></div>
               <Search size={18} className="text-gold" />
@@ -360,6 +353,11 @@ function SearchContent() {
         <div className="results-panel">
           <div className="results-panel-header">
             <h4>{filteredHouses.length > 0 ? `${filteredHouses.length} İnceleme Bulundu` : `${searchQuery} için henüz inceleme yok`}</h4>
+            {filteredHouses.length > 0 && (
+              <p className="trust-info-tag">
+                <ShieldCheck size={14} color="#10b981" /> <strong>Doğrulanmış</strong> rozetleri, kira belgesi sunan gerçek kiracıları temsil eder.
+              </p>
+            )}
             {filteredHouses.length === 0 && searchQuery && (
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '5px' }}>
                 Bu bölgede ilk incelemeyi sen bırakmak ister misin?
@@ -450,6 +448,7 @@ function SearchContent() {
 
         .results-panel { overflow-y: auto; border-right: 1px solid var(--border); background: #fdfdfd; }
         .results-panel-header { padding: 1.5rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: #fdfdfd; z-index: 5; }
+        .trust-info-tag { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #64748b; margin-top: 10px; background: #f0fdf4; padding: 8px 12px; border-radius: 10px; border: 1px solid #dcfce7; }
         .active-filters { display: flex; gap: 8px; margin-top: 1rem; }
         .filter-tag { background: var(--primary); color: white; padding: 4px 10px; border-radius: 100px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
 

@@ -16,7 +16,8 @@ export async function POST(req) {
       houseId,
       role,
       ratings,
-      comment
+      comment,
+      verificationDoc
     } = body;
 
     let house = await prisma.house.findUnique({
@@ -27,12 +28,12 @@ export async function POST(req) {
       return NextResponse.json({ success: false, error: "İnceleme yapmaya çalıştığınız ev sistemde bulunamadı." }, { status: 404 });
     }
 
-    // Anonim ID oluştur (Örn: Kiracı #A12)
+    // Anonim ID oluştur
     const anonId = role === 'tenant'
       ? `Kiracı #${Math.random().toString(36).substring(2, 5).toUpperCase()}`
       : `Ev Sahibi #${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
 
-    // Calculate overall rating from standard ratings
+    // Calculate overall rating
     const ratingValues = Object.values(ratings).filter(v => v > 0);
     const overallRating = ratingValues.length > 0
       ? Math.round(ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length)
@@ -46,7 +47,9 @@ export async function POST(req) {
         targetType: role === 'tenant' ? 'HOUSE' : 'TENANT',
         content: comment || "",
         anonId: anonId,
-        status: "APPROVED",
+        status: verificationDoc ? "PENDING" : "APPROVED",
+        isVerified: false, // Her zaman false başlar, admin doğrular
+        verificationDoc: verificationDoc || null,
         overallRating: overallRating,
 
         // Tenant Ratings

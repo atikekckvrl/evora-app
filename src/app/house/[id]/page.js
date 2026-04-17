@@ -3,15 +3,13 @@ import { useParams } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
-  Star, ShieldCheck, MapPin, Wind, Sun, Volume2, User, ChevronRight,
-  MessageCircle, BedDouble, Square, Layout, ArrowUpSquare, Flame,
-  CheckCircle2, AlertTriangle, Info, Share2, Heart, ArrowLeft, X, Maximize2, Droplets, UserCheck, MessageSquareQuote
+  Star, ShieldCheck, MapPin, UserCheck, MessageSquareQuote, ArrowLeft, CheckCircle2, AlertTriangle, X, Camera
 } from "lucide-react";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
 
 const MapContainer = dynamic(
-  () => import("../../components/Map"),
+  () => import("@/components/Map"),
   {
     ssr: false,
     loading: () => <div className="loading-map">Harita yükleniyor...</div>
@@ -22,14 +20,13 @@ export default function HouseDetailsPage() {
   const params = useParams();
   const houseId = params.id;
   const { data: session, status } = useSession();
-  const [activeImg, setActiveImg] = useState(0);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isReviewModalOpen, setReviewModalOpen] = useState(false);
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login"); // 'login' | 'register'
   const [reviewRole, setReviewRole] = useState("tenant"); // 'tenant' | 'landlord'
   const [reviews, setReviews] = useState([]); // Gerçek yorumlar
   const [comment, setComment] = useState("");
+  const [verificationFile, setVerificationFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Auth Form State
@@ -112,13 +109,11 @@ export default function HouseDetailsPage() {
     id: houseId,
     title: "Yükleniyor...",
     location: "Yükleniyor...",
+    fullAddress: "Yükleniyor...",
     rating: 0,
     reviews: 0,
-    desc: "Lütfen bekleyiniz...",
-    images: ["/apartman.jpg", "/salon.jpg", "/banyo.jpg"]
+    desc: "Lütfen bekleyiniz..."
   });
-
-  const [images, setImages] = useState(house.images);
 
   useEffect(() => {
     const fetchHouse = async () => {
@@ -127,7 +122,6 @@ export default function HouseDetailsPage() {
         if (res.ok) {
           const data = await res.json();
           setHouse(data);
-          setImages(data.images);
         }
       } catch (err) {
         console.error("Ev verisi çekilemedi:", err);
@@ -135,40 +129,6 @@ export default function HouseDetailsPage() {
     };
     fetchHouse();
   }, [houseId]);
-
-  // Bilgisayar için navigasyon
-  const nextImg = () => setActiveImg(prev => (prev + 1) % images.length);
-  const prevImg = () => setActiveImg(prev => (prev - 1 + images.length) % images.length);
-
-  // Scroll takibi (Mobil Counter)
-  const onMobileScroll = (e) => {
-    const scrollPos = e.target.scrollLeft;
-    const width = e.target.offsetWidth;
-    const index = Math.round(scrollPos / width);
-    setActiveImg(index);
-  };
-
-  // Swipe Logic
-  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
-  const handleTouchEnd = (e) => {
-    if (touchStartX.current === null) return;
-    const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) nextImg();
-      else prevImg();
-    }
-    touchStartX.current = null;
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "ArrowRight") nextImg();
-      if (e.key === "ArrowLeft") prevImg();
-      if (e.key === "Escape") setIsLightboxOpen(false);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   // Yorumları Çekme
   const fetchReviews = async () => {
@@ -196,14 +156,16 @@ export default function HouseDetailsPage() {
           houseId,
           role: reviewRole,
           ratings: reviewRole === 'tenant' ? tRatings : lRatings,
-          comment
+          comment,
+          verificationDoc: verificationFile ? verificationFile.name : null // Simülasyon: Sadece dosya adını gönderiyoruz
         })
       });
       const data = await res.json();
       if (data.success) {
-        alert("Yorumunuz başarıyla paylaşıldı!");
+        alert(verificationFile ? "Yorumunuz ve belgeniz alındı. Moderatör onayından sonra 'Doğrulanmış' rozetiyle yayınlanacaktır!" : "Yorumunuz başarıyla paylaşıldı!");
         setReviewModalOpen(false);
         setComment("");
+        setVerificationFile(null);
         fetchReviews(); // Listeyi yenile
       }
     } catch (err) {
@@ -218,84 +180,19 @@ export default function HouseDetailsPage() {
       {/* HEADER SECTION - NO OVERLAP */}
       <div className="house-local-nav">
         <div className="container nav-wrap">
-          <button onClick={() => window.history.back()} className="back-circle"><ArrowLeft size={20} /></button>
+          <button onClick={() => window.history.back()} className="back-circle" style={{ paddingLeft: '8px' }}><ArrowLeft size={20} /> Geri</button>
           <div className="nav-group">
-            <button className="back-circle"><Share2 size={18} /></button>
-            <button className="back-circle"><Heart size={18} /></button>
           </div>
         </div>
       </div>
 
       <div className="container">
-        {/* DESKTOP GALLERY GRID */}
-        <section className="desktop-gallery mt-2">
-          <div className="main-stage-desktop" onClick={() => setIsLightboxOpen(true)}>
-            <img src={images[activeImg]} alt="Main" className="house-hero-img" />
-            <div className="stage-overlay">
-              <Maximize2 size={24} />
-            </div>
-            <div className="img-dots-overlay-desktop">
-              {images.map((_, i) => <div key={i} className={`mini-dot ${i === activeImg ? 'active' : ''}`} />)}
-            </div>
-          </div>
-          <div className="side-thumbs-desktop">
-            {images.map((img, i) => (
-              <div key={i} className={`side-thumb ${i === activeImg ? 'active' : ''}`} onClick={() => setActiveImg(i)}>
-                <img src={img} alt="Side" />
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* MOBILE SCROLL GALLERY */}
-        <section className="mobile-scroll-gallery" onScroll={onMobileScroll}>
-          {images.map((img, i) => (
-            <div key={i} className="mobile-slide" onClick={() => setIsLightboxOpen(true)}>
-              <img src={img} alt="slide" />
-            </div>
-          ))}
-          <div className="mobile-gallery-badge">{activeImg + 1} / {images.length}</div>
-        </section>
-
         <div className="house-layout-grid pt-3">
           <main className="content-side">
             <div className="elite-header-box">
-              <span className="gold-label">PREMIUM KONUT</span>
+              <span className="gold-label">ADRES İNCELEMESİ</span>
               <h1 className="pro-house-title">{house.title}</h1>
-              <div className="pro-location-text"><MapPin size={16} /> {house.location}</div>
-            </div>
-
-            <div className="amenities-strip mt-3">
-              <div className="am-item"><BedDouble size={20} /> 2+1 Oda</div>
-              <div className="am-item"><Square size={20} /> 95 m²</div>
-              <div className="am-item"><Droplets size={20} /> 2 Banyo</div>
-            </div>
-
-            <div className="pro-card-white mt-4">
-              <h3 className="card-title">Mülk Açıklaması</h3>
-              <p className="card-desc">{house.desc}</p>
-            </div>
-
-            <div className="pro-card-white mt-4">
-              <h3 className="card-title">Bina ve Yaşam Kalitesi Değerlendirmesi</h3>
-              <div className="grid-2-col">
-                <div className="bar-item">
-                  <div className="bar-lbl">Isı İzolasyonu ve Isınma <strong style={{ color: '#10b981' }}>4.5 / 5</strong></div>
-                  <div className="bar-track"><div className="bar-fill green" style={{ width: '90%' }} /></div>
-                </div>
-                <div className="bar-item">
-                  <div className="bar-lbl">Ses Yalıtımı (Sessizlik) <strong style={{ color: '#f59e0b' }}>3.0 / 5</strong></div>
-                  <div className="bar-track"><div className="bar-fill orange" style={{ width: '60%' }} /></div>
-                </div>
-                <div className="bar-item">
-                  <div className="bar-lbl">Bina Güvenliği ve Temizlik <strong style={{ color: '#10b981' }}>4.8 / 5</strong></div>
-                  <div className="bar-track"><div className="bar-fill green" style={{ width: '96%' }} /></div>
-                </div>
-                <div className="bar-item">
-                  <div className="bar-lbl">Toplu Taşıma ve Konum <strong style={{ color: '#10b981' }}>5.0 / 5</strong></div>
-                  <div className="bar-track"><div className="bar-fill green" style={{ width: '100%' }} /></div>
-                </div>
-              </div>
+              <div className="pro-location-text"><MapPin size={16} /> {house.fullAddress}</div>
             </div>
 
             <div className="pro-card-white mt-4">
@@ -318,7 +215,12 @@ export default function HouseDetailsPage() {
 
             <div className="pro-card-white mt-4" style={{ marginBottom: "2rem" }}>
               <div className="reviews-header">
-                <h3 className="card-title" style={{ margin: 0 }}>Bina Hakkında Yorumlar</h3>
+                <div>
+                  <h3 className="card-title" style={{ margin: 0 }}>Bina Hakkında Yorumlar</h3>
+                  <p style={{ fontSize: '0.81rem', color: '#64748b', marginTop: '6px', fontWeight: '500' }}>
+                    <ShieldCheck size={14} style={{ display: 'inline', color: '#10b981', marginBottom: '-2px' }} /> <strong>Doğrulanmış</strong> rozetli yorumlar, resmi belgelerle o evde yaşadığı teyit edilmiş gerçek kiracılara aittir.
+                  </p>
+                </div>
                 <span className="badge-count-pro">{reviews.length} Yorum</span>
               </div>
               <div className="reviews-list mt-3">
@@ -339,14 +241,14 @@ export default function HouseDetailsPage() {
                         <strong>{rev.anonId}</strong>
                         <span>{new Date(rev.createdAt).toLocaleDateString('tr-TR')} tarihinde paylaşıldı</span>
                       </div>
-                      <div className="reviewer-score"><Star size={14} fill="#b4975a" stroke="none" /> {rev.overallRating}.0</div>
+                      <div className="reviewer-score"><Star size={14} fill="#b4975a" stroke="none" /> {rev.overallRating ? rev.overallRating.toFixed(1) : "0.0"}</div>
                     </div>
                     <p className="review-text-pro">"{rev.content}"</p>
 
                     {rev.targetType === 'HOUSE' && (
                       <div className="review-pros-cons">
-                        <div className="pros"><CheckCircle2 size={14} color="#10b981" /> Doğrulanmış Kiracı</div>
-                        {rev.noiseRating <= 2 && <div className="cons"><AlertTriangle size={14} color="#ef4444" /> Gürültü Sorunu</div>}
+                        {rev.isVerified && <div className="pros"><CheckCircle2 size={14} color="#10b981" /> Doğrulanmış Kiracı</div>}
+                        {rev.noiseRating && rev.noiseRating <= 2 && <div className="cons"><AlertTriangle size={14} color="#ef4444" /> Gürültü Sorunu</div>}
                       </div>
                     )}
                   </div>
@@ -369,7 +271,7 @@ export default function HouseDetailsPage() {
                   <span className="big-val">{house.rating}</span>
                   <div className="stars-wrap">
                     <div className="stars-row" style={{ justifyContent: "center" }}>
-                      {[1, 2, 3, 4, 5].map(i => <Star key={i} size={16} fill={i <= 4 ? "#b4975a" : "none"} stroke="#b4975a" />)}
+                      {[1, 2, 3, 4, 5].map(i => <Star key={i} size={16} fill={i <= Math.round(house.rating) ? "#b4975a" : "none"} stroke="#b4975a" />)}
                     </div>
                     <small>{house.reviews} Doğrulanmış Puan</small>
                   </div>
@@ -389,33 +291,10 @@ export default function HouseDetailsPage() {
                 </button>
                 <p className="anon-note"><ShieldCheck size={12} style={{ display: 'inline', marginBottom: '-2px' }} /> Kimliğin tamamen anonim tutulur.</p>
               </div>
-
-              <div className="pro-finance-card mt-3">
-                <h4 style={{ fontSize: "0.85rem", marginBottom: "12px", borderBottom: "1px solid #e2e8f0", paddingBottom: "8px" }}>Son Kiracı Bildirimleri</h4>
-                <div className="fin-grid">
-                  <div className="fin-box"><small>Ortalama Aidat</small><strong>750 TL</strong></div>
-                  <div className="fin-box"><small>Talep Edilen Depozito</small><strong>2 Kira</strong></div>
-                </div>
-              </div>
             </div>
           </aside>
         </div>
       </div>
-
-      {isLightboxOpen && (
-        <div className="pro-lightbox" onClick={() => setIsLightboxOpen(false)}>
-          <button className="lb-close" onClick={() => setIsLightboxOpen(false)}><X size={36} /></button>
-
-          {/* Masaüstü Okları */}
-          <button className="lb-nav-btn lb-prev desktop-only" onClick={(e) => { e.stopPropagation(); prevImg(); }}>‹</button>
-          <button className="lb-nav-btn lb-next desktop-only" onClick={(e) => { e.stopPropagation(); nextImg(); }}>›</button>
-
-          <div className="lb-scroller" onClick={(e) => e.stopPropagation()} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-            <img src={images[activeImg]} alt="full" />
-            <div className="lightbox-badge">{activeImg + 1} / {images.length}</div>
-          </div>
-        </div>
-      )}
 
       {/* AUTH (GİRİŞ / KAYIT) MODALI */}
       {isAuthModalOpen && (
@@ -515,66 +394,31 @@ export default function HouseDetailsPage() {
               <h2>Deneyimini Paylaş</h2>
               <button className="close-btn" onClick={() => setReviewModalOpen(false)}><X size={24} /></button>
             </div>
-
-            <div className="role-selector">
-              <button
-                className={`role-btn ${reviewRole === 'tenant' ? 'active' : ''}`}
-                onClick={() => setReviewRole('tenant')}
-              >
-                Oturduğum Evi Puanlıyorum
-              </button>
-              <button
-                className={`role-btn ${reviewRole === 'landlord' ? 'active' : ''}`}
-                onClick={() => setReviewRole('landlord')}
-              >
-                Kiracımı Puanlıyorum
-              </button>
-            </div>
-
             <div className="anon-warning">
               <ShieldCheck size={20} color="#10b981" />
               <div>
                 <strong>Kimliğin Gizli Kalacak</strong>
-                <p>Yorumun sistemde {reviewRole === 'tenant' ? '"Kiracı #A12"' : '"Ev Sahibi #B45"'} olarak görünecek. Amacımız adil ve güvenli bir bilgi ağı kurmak.</p>
+                <p>Yorumun sistemde "Kiracı #A12" gibi anonim bir rumuzla görünecek. Amacımız adil ve güvenli bir bilgi ağı kurmak.</p>
               </div>
             </div>
 
             <div className="rating-questions">
-              {reviewRole === 'tenant' ? (
-                <>
-                  <div className="q-row">
-                    <span>Rutubet ve İzolasyon Sorunu Yaşadın mı?</span>
-                    <InteractiveStars name="q1" value={tRatings.q1} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
-                  </div>
-                  <div className="q-row">
-                    <span>Evin Güneş Alma Durumu Nasıldı?</span>
-                    <InteractiveStars name="q2" value={tRatings.q2} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
-                  </div>
-                  <div className="q-row">
-                    <span>Gürültü Seviyesi (Yan ve Alt Komşular)</span>
-                    <InteractiveStars name="q3" value={tRatings.q3} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
-                  </div>
-                  <div className="q-row">
-                    <span>Ev Sahibi İletişimi Nasıldı?</span>
-                    <InteractiveStars name="q4" value={tRatings.q4} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="q-row">
-                    <span>Kira Düzenli Ödendi mi?</span>
-                    <InteractiveStars name="l_q1" value={lRatings.q1} onChange={(k, v) => setLRatings(p => ({ ...p, q1: v }))} />
-                  </div>
-                  <div className="q-row">
-                    <span>Ev Temiz Kullanıldı mı?</span>
-                    <InteractiveStars name="l_q2" value={lRatings.q2} onChange={(k, v) => setLRatings(p => ({ ...p, q2: v }))} />
-                  </div>
-                  <div className="q-row">
-                    <span>Komşularla Sorun Yaşandı mı?</span>
-                    <InteractiveStars name="l_q3" value={lRatings.q3} onChange={(k, v) => setLRatings(p => ({ ...p, q3: v }))} />
-                  </div>
-                </>
-              )}
+              <div className="q-row">
+                <span>Rutubet ve İzolasyon Sorunu Yaşadın mı?</span>
+                <InteractiveStars name="q1" value={tRatings.q1} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
+              </div>
+              <div className="q-row">
+                <span>Evin Güneş Alma Durumu Nasıldı?</span>
+                <InteractiveStars name="q2" value={tRatings.q2} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
+              </div>
+              <div className="q-row">
+                <span>Gürültü Seviyesi (Yan ve Alt Komşular)</span>
+                <InteractiveStars name="q3" value={tRatings.q3} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
+              </div>
+              <div className="q-row">
+                <span>Ev Sahibi İletişimi Nasıldı?</span>
+                <InteractiveStars name="q4" value={tRatings.q4} onChange={(k, v) => setTRatings(p => ({ ...p, [k]: v }))} />
+              </div>
             </div>
 
             <div className="review-text-area">
@@ -582,9 +426,29 @@ export default function HouseDetailsPage() {
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder={reviewRole === 'tenant' ? "Örn: Ev sahibi Mert Bey çok ilgiliydi ama kombi sürekli arıza yapıyordu..." : "Örn: Ödemeler hep gecikti ve duvarlara zarar verilmiş..."}
+                placeholder="Örn: Ev sahibi Mert Bey çok ilgiliydi ama kombi sürekli arıza yapıyordu..."
               ></textarea>
             </div>
+
+            {true && (
+              <div className="verification-upload-box">
+                <Camera size={24} color="var(--a)" />
+                <div className="v-text-content">
+                  <strong>Doğrulanmış Kiracı Ol (Önerilir)</strong>
+                  <p>Kira kontratı veya fatura yükle. <span style={{ color: '#b45309', fontWeight: '800' }}>TC No gibi özel bilgileri karalayarak yükleyebilirsin.</span> Sadece adresin ve adınızın görünmesi yeterlidir.</p>
+                </div>
+                <input
+                  type="file"
+                  id="v-upload-input"
+                  style={{ display: 'none' }}
+                  onChange={(e) => setVerificationFile(e.target.files[0])}
+                  accept="image/*,application/pdf"
+                />
+                <label htmlFor="v-upload-input" className="v-btn-alt">
+                  {verificationFile ? "✓ Seçildi" : "Dosya Seç"}
+                </label>
+              </div>
+            )}
 
             <div className="modal-footer">
               <p className="terms-text">Gönder'e basarak Topluluk Kurallarını ve iftira/yanıltıcı beyan paylaşmadığını kabul etmiş olursun.</p>
@@ -608,45 +472,22 @@ export default function HouseDetailsPage() {
         
         .container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
         
+        .house-layout-grid { display: grid; grid-template-columns: 1fr 380px; gap: 2.5rem; }
+        .content-side { min-width: 0; }
+        .elite-header-box { margin-bottom: 2.5rem; }
+        .gold-label { display: block; color: var(--a); font-weight: 800; font-size: 0.85rem; letter-spacing: 1.5px; margin-bottom: 0.5rem; }
+        .pro-house-title { font-size: 3.5rem; font-weight: 950; line-height: 1; letter-spacing: -3px; margin: 0.5rem 0; color: var(--p); }
+        .pro-location-text { display: flex; align-items: center; gap: 8px; color: #64748b; font-weight: 600; font-size: 1.1rem; }
+        
+        .pro-card-white { background: white; border-radius: 32px; padding: 2.5rem; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        
         .house-local-nav { padding: 1.5rem 0; background: #fff; border-bottom: 1px solid #f1f5f9; }
         .nav-wrap { display: flex; justify-content: space-between; align-items: center; }
-        .back-circle { width: 44px; height: 44px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; text-decoration: none; color: var(--p); transition: 0.3s; }
+        .back-circle { width: auto; height: 44px; padding: 0 20px; background: white; border-radius: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); cursor: pointer; text-decoration: none; color: var(--p); transition: 0.3s; font-weight: 700; }
         .back-circle:hover { border-color: var(--a); color: var(--a); transform: translateY(-2px); }
         .nav-group { display: flex; gap: 12px; }
 
-        /* DESKTOP GALLERY GRID */
-        .desktop-gallery { display: grid; grid-template-columns: 1fr 200px; gap: 15px; height: 550px; }
-        .main-stage-desktop { border-radius: 24px; overflow: hidden; position: relative; cursor: zoom-in; }
-        .house-hero-img { width: 100%; height: 100%; object-fit: cover; }
-        .stage-overlay { position: absolute; top: 30px; right: 30px; background: rgba(255,255,255,0.9); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .side-thumbs-desktop { display: flex; flex-direction: column; gap: 15px; }
-        .side-thumb { height: 173px; border-radius: 16px; overflow: hidden; cursor: pointer; opacity: 0.6; transition: 0.3s; }
-        .side-thumb.active { opacity: 1; border: 3px solid var(--p); }
-        .side-thumb img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* MOBILE SCROLL GALLERY */
-        .mobile-scroll-gallery { display: none; margin: 0 -1.5rem; position: relative; }
-        
-        .house-layout-grid { display: grid; grid-template-columns: 1fr 400px; gap: 4rem; }
-        .pt-3 { padding-top: 2rem; }
-        
-        .gold-label { color: var(--a); font-weight: 800; font-size: 0.8rem; letter-spacing: 1px; }
-        .pro-house-title { font-size: 3.5rem; font-weight: 950; margin: 5px 0; letter-spacing: -2px; }
-        .pro-location-text { color: #64748b; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
-
-        .amenities-strip { display: flex; gap: 3rem; padding-bottom: 2rem; border-bottom: 1px solid #f1f5f9; }
-        .am-item { display: flex; align-items: center; gap: 10px; font-weight: 700; color: #475569; }
-
-        .pro-card-white { background: #fff; padding: 2rem; border-radius: 20px; border: 1px solid #f1f5f9; }
-        .card-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; }
-        .card-desc { line-height: 1.8; color: #334155; font-size: 1.1rem; }
-
-        .grid-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-        .bar-lbl { display: flex; justify-content: space-between; font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; }
-        .bar-track { height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
-        .bar-fill { height: 100%; border-radius: 4px; }
-        .bar-fill.orange { background: #f59e0b; }
-        .bar-fill.green { background: #10b981; }
+        .card-title { font-size: 1.75rem; font-weight: 900; margin-bottom: 2rem; letter-spacing: -1px; }
 
         .sticky-box { position: sticky; top: 100px; }
         .pro-trust-card { background: white; padding: 2.5rem; border-radius: 32px; border: 1px solid #f1f5f9; box-shadow: 0 15px 35px rgba(0,0,0,0.02); text-align: center; }
@@ -656,26 +497,7 @@ export default function HouseDetailsPage() {
         .btn-primary-elite { width: 100%; background: var(--p); color: white; border: none; padding: 1.25rem; border-radius: 18px; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: 0.3s; }
         .anon-note { font-size: 0.75rem; color: #94a3b8; margin-top: 15px; font-weight: 600; }
 
-        .pro-finance-card { background: var(--s); padding: 1.5rem; border-radius: 20px; }
-        .fin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .fin-box small { display: block; font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; }
-        .fin-box strong { font-size: 1.15rem; font-weight: 800; }
-        .fin-note { font-size: 0.75rem; color: #94a3b8; margin-top: 10px; }
-
-        /* LIGHTBOX SCROLLABLE Z-INDEX FIXED */
-        .pro-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 99999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
-        .lb-close { position: absolute; top: 25px; right: 25px; background: white; border: none; width: 50px; height: 50px; border-radius: 50%; z-index: 100000; cursor: pointer; display: flex; align-items: center; justify-content: center; color: black; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        
-        .lb-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); color: white; border: none; width: 60px; height: 60px; border-radius: 50%; font-size: 2.5rem; cursor: pointer; z-index: 100000; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
-        .lb-nav-btn:hover { background: white; color: black; }
-        .lb-prev { left: 40px; }
-        .lb-next { right: 40px; }
-
-        .lb-scroller { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none; }
-        .lb-scroller img { max-width: 95%; max-height: 85vh; object-fit: contain; border-radius: 12px; animation: fadeIn 0.3s; pointer-events: none; }
-        .lightbox-badge { position: absolute; bottom: 30px; color: white; font-weight: 800; opacity: 0.8; font-size: 1.1rem; }
-        
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .score-wrap { display: flex; flex-direction: column; align-items: center; gap: 5px; margin-bottom: 2rem; }
 
         /* REVIEW SECTION STYLES */
         .reviews-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 1rem; border-bottom: 1px solid #f1f5f9; }
@@ -737,6 +559,15 @@ export default function HouseDetailsPage() {
         .terms-text { font-size: 0.75rem; color: #94a3b8; margin-bottom: 1rem; }
         .submit-review-btn { width: 100%; background: var(--p); color: white; border: none; padding: 1.25rem; border-radius: 14px; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: 0.3s; }
         .submit-review-btn:hover { background: #000; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        
+        .verification-upload-box { 
+          display: flex; align-items: center; gap: 15px; background: #fffbeb; border: 1px dashed #f59e0b; padding: 1.25rem; border-radius: 16px; margin-bottom: 2rem;
+        }
+        .v-text-content { flex: 1; }
+        .v-text-content strong { display: block; font-size: 0.9rem; color: #b45309; margin-bottom: 2px; }
+        .v-text-content p { margin: 0; font-size: 0.75rem; color: #d97706; line-height: 1.4; }
+        .v-btn-alt { background: white; border: 1px solid #f59e0b; color: #b45309; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: 0.2s; white-space: nowrap; }
+        .v-btn-alt:hover { background: #fef3c7; }
 
         .google-btn-pro { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 12px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; font-weight: 700; font-size: 0.95rem; color: #334155; cursor: pointer; transition: 0.2s; }
         .google-btn-pro:hover { background: #f8fafc; border-color: #cbd5e1; }

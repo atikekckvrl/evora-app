@@ -1,9 +1,13 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Search, MapPin, Star, ShieldCheck, TrendingUp, ArrowRight, Home as HomeIcon, UserCheck, MessageSquare, Building2, CheckCircle2 } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
+  const { data: session } = useSession();
   const [searchTxt, setSearchTxt] = useState("");
   const [latestHouses, setLatestHouses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -25,6 +29,15 @@ export default function Home() {
     fetchLatest();
   }, []);
 
+  const handleAddHouse = (e) => {
+    e.preventDefault();
+    if (!session) {
+      router.push("/login?callbackUrl=/house/new");
+    } else {
+      router.push("/house/new");
+    }
+  };
+
   return (
     <div className="pro-container">
       {/* PROFESSIONAL SPLIT HERO */}
@@ -41,25 +54,35 @@ export default function Home() {
             </h1>
             <p className="hero-desc">
               Ev orası, ama huzur neresi? <br />
-              Taşınmadan önce komşuları, ev sahibini ve binanın gerçek durumunu öğrenin. Türkiye'nin en dürüst emlak ağı.
+              Taşınmadan önce komşuları, ev sahibini ve binanın gerçek durumunu öğrenin.
+              <span style={{ display: 'block', marginTop: '15px', fontSize: '0.9rem', color: 'var(--accent)', fontWeight: '700' }}>
+                🛡️ Doğrulanmış rozetleri, kira belgesi sunan gerçek kiracıları temsil eder.
+              </span>
             </p>
 
-            <div className="search-professional">
-              <div className="search-field">
-                <MapPin size={22} className="icon-gold" />
-                <input
-                  type="text"
-                  placeholder="Semt, mahalle veya sokak adı..."
-                  value={searchTxt}
-                  onChange={(e) => setSearchTxt(e.target.value)}
-                />
+            <div className="hero-actions">
+              <div className="search-professional">
+                <div className="search-field">
+                  <MapPin size={22} className="icon-gold" />
+                  <input
+                    type="text"
+                    placeholder="Altıeylül'de mahalle, sokak veya bina..."
+                    value={searchTxt}
+                    onChange={(e) => setSearchTxt(e.target.value)}
+                  />
+                </div>
+                <Link href={`/search?q=${searchTxt}`} style={{ display: 'contents' }}>
+                  <button className="btn btn-navy">
+                    <Search size={20} />
+                    <span className="desktop-text">Bul</span>
+                  </button>
+                </Link>
               </div>
-              <Link href={`/search?q=${searchTxt}`} style={{ display: 'contents' }}>
-                <button className="btn btn-navy">
-                  <Search size={20} />
-                  <span>Evi Sorgula</span>
-                </button>
-              </Link>
+
+              <button className="btn-outline-gold" onClick={handleAddHouse}>
+                <HomeIcon size={20} />
+                <span className="desktop-text">Yeni Ev Ekle</span>
+              </button>
             </div>
 
             <div className="pro-stats">
@@ -175,21 +198,28 @@ export default function Home() {
 
       <style dangerouslySetInnerHTML={{
         __html: `
-        .hero-split { display: grid; grid-template-columns: 1fr 1fr; min-height: 90vh; background: #fff; }
-        .hero-split-content { display: flex; align-items: center; padding: 4rem 5%; } /* Mobilde dengeleme için azaltıldı */
-        .hero-info { max-width: 600px; margin: 0 auto; } /* Mobilde ortalama için */
+        .hero-split { display: grid; grid-template-columns: 1fr 1fr; min-height: 90vh; background: #fff; position: relative; }
+        .hero-split-content { display: flex; align-items: center; padding: 4rem 5%; position: relative; z-index: 2; } /* Mobilde dengeleme için azaltıldı */
+        .hero-info { max-width: 600px; margin: 0 auto; position: relative; z-index: 3; } /* Mobilde ortalama için */
         
         .pro-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--accent-soft); color: var(--accent); padding: 8px 16px; border-radius: 100px; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2rem; }
         .hero-desc { font-size: 1.25rem; color: var(--text-muted); line-height: 1.6; margin-top: 1.5rem; }
 
-        .search-professional { display: flex; background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.5rem; margin-top: 3rem; box-shadow: var(--shadow-sm); }
-        .search-field { flex: 1; display: flex; align-items: center; padding: 0 1rem; gap: 12px; }
-        .search-field input { border: none; outline: none; width: 100%; font-size: 1rem; font-weight: 600; color: var(--primary); }
-        .icon-gold { color: var(--accent); }
-
         .hero-split-image { position: relative; overflow: hidden; background: #000; }
         .hero-main-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
-        .overlay-gradient { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, white, transparent 20%); z-index: 1; }
+        .overlay-gradient { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, white, transparent 20%); z-index: 1; pointer-events: none; }
+
+        .hero-actions { display: flex; gap: 1rem; margin-top: 3rem; align-items: stretch; }
+        .search-professional { display: flex; background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.5rem; box-shadow: var(--shadow-sm); flex: 1; }
+        .search-field { flex: 1; display: flex; align-items: center; padding: 0 1rem; gap: 12px; }
+        .search-field input { border: none; outline: none; width: 100%; font-size: 0.95rem; font-weight: 600; color: var(--primary); }
+        .icon-gold { color: var(--accent); }
+        
+        .btn-outline-gold { background: transparent; color: var(--accent); border: 2px solid var(--accent); border-radius: var(--radius-md); padding: 0 1.5rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; position: relative; overflow: hidden; z-index: 1; }
+        .btn-outline-gold::before { content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--accent); z-index: -1; transform: scaleX(0); transform-origin: left; transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-outline-gold:hover { color: white; box-shadow: 0 10px 20px rgba(180, 151, 90, 0.25); transform: translateY(-2px); }
+        .btn-outline-gold:hover::before { transform: scaleX(1); }
+
 
         .pro-stats { display: flex; gap: 3rem; margin-top: 4rem; border-top: 1px solid var(--border); padding-top: 2rem; justify-content: center; }
         .stat strong { display: block; font-size: 1.5rem; font-weight: 800; color: var(--primary); }
@@ -241,7 +271,9 @@ export default function Home() {
           .hero-split-content { padding: 6rem 1.5rem; text-align: center; width: 100%; box-sizing: border-box; }
           .hero-info { width: 100%; }
           .display-lg { font-size: 2.8rem; letter-spacing: -2px; }
-          .search-professional { flex-direction: column; gap: 10px; padding: 1rem; }
+          .hero-actions { flex-direction: column; gap: 1rem; padding: 1rem; }
+          .search-professional { flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box; }
+          .btn-outline-gold { padding: 1rem; width: 100%; }
           .pro-steps-grid { grid-template-columns: 1fr; gap: 1.5rem; }
           .house-list-pro { grid-template-columns: 1fr; padding: 0 1rem; }
           .section-title-center h2 { font-size: 2.2rem; }
@@ -255,6 +287,7 @@ export default function Home() {
           .display-lg { font-size: 2.2rem; }
           .hero-desc { font-size: 1rem; }
           .section { padding: 4rem 0; }
+          .desktop-text { display: none; }
         }
       `}} />
     </div>

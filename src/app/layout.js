@@ -62,6 +62,13 @@ function NavbarContent() {
                   <Link href="/profile" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                     <User size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Profilim
                   </Link>
+
+                  {session.user.role === 'ADMIN' && (
+                    <Link href="/admin/moderation" className="dropdown-item" style={{ color: '#b45309' }} onClick={() => setIsMenuOpen(false)}>
+                      <ShieldCheck size={16} style={{ marginRight: '8px', verticalAlign: 'middle', color: '#b45309' }} /> Yönetim Paneli
+                    </Link>
+                  )}
+
                   <Link href="/profile" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                     <Heart size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Favorilerim
                   </Link>

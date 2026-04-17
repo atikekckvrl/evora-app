@@ -68,6 +68,7 @@ export default function MapComponent({ houses = [], center, zoom, onMapClick }) 
   return (
     <div ref={containerRef} style={{ height: "100%", width: "100%", minHeight: "350px", position: "relative" }}>
       <MapContainer
+        key={`${center?.[0]}-${center?.[1]}-${houses?.length}`}
         center={[39.6484, 27.8826]}
         zoom={zoom || 13}
         maxZoom={21}
