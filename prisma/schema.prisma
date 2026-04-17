@@ -58,6 +58,7 @@ model User {
   sessions      Session[]
   reviews       Review[]
   favorites     Favorite[]
+  ownedHouses   House[]   @relation("HouseOwner")
   createdAt     DateTime  @default(now())
 }
 
@@ -95,6 +96,9 @@ model House {
   latitude     Float?
   longitude    Float?
   
+  ownerId      String?
+  owner        User?    @relation("HouseOwner", fields: [ownerId], references: [id])
+  
   reviews      Review[]
   favorites    Favorite[]
   createdAt    DateTime @default(now())
@@ -131,6 +135,9 @@ model Review {
   verificationDoc String? // URL to doc
   
   anonId         String   // E.g., "Kiracı #A12"
+  
+  landlordReply  String?
+  landlordReplyAt DateTime?
   
   createdAt      DateTime @default(now())
 }

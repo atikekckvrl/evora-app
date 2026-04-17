@@ -33,6 +33,11 @@ export default function HouseDetailsPage() {
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
   const [authError, setAuthError] = useState("");
 
+  // Landlord Actions State
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [replyingToId, setReplyingToId] = useState(null);
+  const [replyText, setReplyText] = useState("");
+
   const handleAuthSubmit = async (e) => {
     if (e) e.preventDefault();
     setAuthError("");
@@ -145,6 +150,61 @@ export default function HouseDetailsPage() {
     fetchReviews();
   }, [houseId]);
 
+  // Evi Sahiplen
+  const claimHouse = async () => {
+    if (!session) {
+      setAuthMode("login");
+      setAuthModalOpen(true);
+      return;
+    }
+
+    if (!confirm("Evi sahiplenmek istediğinize emin misiniz?")) return;
+
+    setIsClaiming(true);
+    try {
+      const res = await fetch(`/api/houses/${houseId}/claim`, { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        alert("Evi başarıyla sahiplendiniz!");
+        setHouse(prev => ({ ...prev, ownerId: session.user.id }));
+      } else {
+        alert(data.error || "İşlem başarısız.");
+      }
+    } catch (err) {
+      alert("Hata oluştu.");
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
+  // Yorum Yanıtlama (Ev Sahibi)
+  const submitReply = async (reviewId) => {
+    if (!replyText || replyText.trim().length < 5) {
+      alert("Lütfen geçerli bir cevap yazın.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/reviews/${reviewId}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ replyContent: replyText })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        alert("Cevabınız kaydedildi.");
+        setReplyingToId(null);
+        setReplyText("");
+        fetchReviews();
+      } else {
+        alert(data.error || "İşlem başarısız.");
+      }
+    } catch (err) {
+      alert("Hata oluştu.");
+    }
+  };
+
   // Yorum Gönderme
   const submitReview = async () => {
     setIsSubmitting(true);
@@ -245,8 +305,48 @@ export default function HouseDetailsPage() {
                     </div>
                     <p className="review-text-pro">"{rev.content}"</p>
 
+                    {/* Ev Sahibinin Cevabı Varsa Göster */}
+                    {rev.landlordReply && (
+                      <div className="landlord-reply-box" style={{ marginTop: '15px', padding: '15px', background: '#f8fafc', borderLeft: '4px solid #b45309', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#b45309', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                          <ShieldCheck size={16} /> Ev Sahibinin Yanıtı
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155' }}>{rev.landlordReply}</p>
+                        {rev.landlordReplyAt && <small style={{ color: '#94a3b8', display: 'block', marginTop: '5px' }}>{new Date(rev.landlordReplyAt).toLocaleDateString()}</small>}
+                      </div>
+                    )}
+
+                    {/* Ev Sahibi İse ve Cevap Yoksa Yanıtla Butonu */}
+                    {status === 'authenticated' && house.ownerId === session?.user?.id && !rev.landlordReply && (
+                      <div className="mt-3">
+                        {replyingToId === rev.id ? (
+                          <div style={{ background: '#f1f5f9', padding: '15px', borderRadius: '12px' }}>
+                            <textarea
+                              className="w-100 p-2 border rounded"
+                              rows="3"
+                              placeholder="Cevabınızı buraya yazın..."
+                              value={replyText}
+                              onChange={e => setReplyText(e.target.value)}
+                              style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px' }}
+                            ></textarea>
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px', justifyContent: 'flex-end' }}>
+                              <button onClick={() => setReplyingToId(null)} style={{ padding: '6px 15px', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', color: '#64748b' }}>İptal</button>
+                              <button onClick={() => submitReply(rev.id)} style={{ padding: '6px 15px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Cevabı Gönder</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setReplyingToId(rev.id); setReplyText(""); }}
+                            style={{ background: 'transparent', color: '#b45309', fontWeight: 'bold', border: '1px solid #b45309', padding: '5px 15px', borderRadius: '20px', cursor: 'pointer', fontSize: '0.85rem' }}
+                          >
+                            Hakkınızda yapılan yoruma yanıt verin
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {rev.targetType === 'HOUSE' && (
-                      <div className="review-pros-cons">
+                      <div className="review-pros-cons" style={{ marginTop: '15px' }}>
                         {rev.isVerified && <div className="pros"><CheckCircle2 size={14} color="#10b981" /> Doğrulanmış Kiracı</div>}
                         {rev.noiseRating && rev.noiseRating <= 2 && <div className="cons"><AlertTriangle size={14} color="#ef4444" /> Gürültü Sorunu</div>}
                       </div>
@@ -291,6 +391,28 @@ export default function HouseDetailsPage() {
                 </button>
                 <p className="anon-note"><ShieldCheck size={12} style={{ display: 'inline', marginBottom: '-2px' }} /> Kimliğin tamamen anonim tutulur.</p>
               </div>
+
+              {/* EV SAHİBİ KUTUSU */}
+              <div className="pro-trust-card mt-4" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
+                <h3 style={{ margin: "0 0 10px 0", fontSize: "1.1rem" }}>Bu evin sahibi misiniz?</h3>
+                {house.ownerId === session?.user?.id ? (
+                  <p style={{ color: "#10b981", fontSize: "0.9rem", fontWeight: "bold" }}><ShieldCheck size={16} /> Bu ev sizin üzerinize kayıtlı. Yorumlara yanıt verebilirsiniz.</p>
+                ) : house.ownerId ? (
+                  <p style={{ color: "#ef4444", fontSize: "0.9rem" }}>Bu ev başka bir kullanıcı tarafından platformda sahiplenilmiş.</p>
+                ) : (
+                  <>
+                    <p style={{ color: "#64748b", fontSize: "0.85rem", marginBottom: "15px" }}>Evi sahiplenerek kiracı yorumlarına resmi yanıt verebilirsiniz.</p>
+                    <button
+                      onClick={claimHouse}
+                      disabled={isClaiming}
+                      style={{ width: '100%', padding: '10px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', justifyContent: 'center', gap: '8px' }}
+                    >
+                      {isClaiming ? "İşleniyor..." : "Yetkili Olarak Sahiplen"}
+                    </button>
+                  </>
+                )}
+              </div>
+
             </div>
           </aside>
         </div>

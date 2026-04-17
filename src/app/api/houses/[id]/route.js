@@ -55,6 +55,7 @@ export async function GET(req, { params }) {
       reviews: reviewCount,
       latitude,
       longitude,
+      ownerId: house.ownerId,
       desc: `${house.street} Sokak, No: ${house.buildingNo}, D: ${house.flatNo} adresindeki konut. İncelemelere veya puanlara katkıda bulunabilirsiniz.`,
       images: ["/apartman.jpg", "/salon.jpg", "/banyo.jpg"] // Fallback images
     });
