@@ -1,25 +1,25 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ShieldCheck, XCircle, CheckCircle2, FileText, ExternalLink, Home, Clock, User } from "lucide-react";
+import { ShieldCheck, XCircle, CheckCircle2, FileText, ExternalLink, Home, Clock, User, Landmark } from "lucide-react";
 
-export default function ModerationPage() {
-    const [reviews, setReviews] = useState([]);
+export default function ClaimsPage() {
+    const [claims, setClaims] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchPending = async () => {
+    const fetchClaims = async () => {
         try {
-            const res = await fetch("/api/admin/moderation");
+            const res = await fetch("/api/admin/claims");
             const data = await res.json();
-            if (Array.isArray(data)) setReviews(data);
+            if (Array.isArray(data)) setClaims(data);
         } catch (err) {
-            console.error("Yorumlar yüklenemedi:", err);
+            console.error("Başvurular yüklenemedi:", err);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchPending();
+        fetchClaims();
     }, []);
 
     const handleAction = async (id, action) => {
@@ -30,90 +30,87 @@ export default function ModerationPage() {
                 body: JSON.stringify({ action })
             });
             if (res.ok) {
-                setReviews(prev => prev.filter(r => r.id !== id));
+                setClaims(prev => prev.filter(c => c.id !== id));
             }
         } catch (err) {
             alert("İşlem sırasında hata oluştu.");
         }
     };
 
-    if (loading) return <div className="admin-loading">Moderasyon Kuyruğu Yükleniyor...</div>;
+    if (loading) return <div className="admin-loading">Ev Sahibi Başvuruları Yükleniyor...</div>;
 
     return (
         <div className="admin-container">
             <header className="admin-header">
                 <div className="header-text">
-                    <h1>Moderasyon Paneli</h1>
-                    <p>Bekleyen belgeleri ve yorumları incele, onayla veya reddet.</p>
+                    <h1>Ev Sahibi Onayları</h1>
+                    <p>Platform üzerinden sahiplenme (Tapu incelemesi) yapmak isteyen ev sahiplerinin başvurularını değerlendirin.</p>
                 </div>
                 <div className="stat-badge">
-                    <Clock size={16} /> {reviews.length} Bekleyen İşlem
+                    <Clock size={16} /> {claims.length} Bekleyen Başvuru
                 </div>
             </header>
 
             <div className="moderation-grid">
-                {reviews.length === 0 ? (
+                {claims.length === 0 ? (
                     <div className="empty-state">
                         <CheckCircle2 size={48} color="#10b981" />
-                        <h3>Harika!</h3>
-                        <p>Bekleyen herhangi bir moderasyon işlemi bulunmuyor.</p>
+                        <h3>Tüm Başvurular İncelendi!</h3>
+                        <p>Şu anda bekleyen herhangi bir ev sahipliği başvurusu bulunmuyor.</p>
                     </div>
                 ) : (
-                    reviews.map((rev) => (
-                        <div key={rev.id} className="moderation-card">
+                    claims.map((claim) => (
+                        <div key={claim.id} className="moderation-card">
                             <div className="card-top">
                                 <div className="house-info">
-                                    <Home size={18} color="var(--a)" />
-                                    <strong>{rev.house.neighborhood}, {rev.house.district}</strong>
+                                    <Home size={18} color="var(--primary)" />
+                                    <strong>{claim.house.neighborhood}, {claim.house.district}</strong>
                                 </div>
-                                <div className={`status-pill ${rev.targetType === 'OWNERSHIP_CLAIM' ? 'claim-pill' : rev.status.toLowerCase()}`}>
-                                    {rev.targetType === 'OWNERSHIP_CLAIM' ? 'Sahiplenme Talebi' : (rev.status === 'PENDING' ? 'Onay Bekliyor' : 'Belge Onayı')}
+                                <div className="status-pill claim-pill">
+                                    Tapu Onayı Bekliyor
                                 </div>
                             </div>
 
-                            <div className="review-content">
-                                {rev.targetType === 'OWNERSHIP_CLAIM' ? (
-                                    <div>
-                                        <h4 style={{ margin: '0 0 5px 0', color: '#0f172a' }}>Ev Sahibi Olmak İstiyor</h4>
-                                        <p style={{ fontStyle: 'normal', color: '#64748b' }}>Kullanıcı bu evi üzerine almak istiyor. Lütfen tapu kaydını teyit edin.</p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <p>"{rev.content}"</p>
-                                        <div className="ratings-summary">
-                                            <span className="rating-pill">⭐ {rev.overallRating}/5</span>
-                                        </div>
-                                    </>
-                                )}
+                            <div className="claim-content">
+                                <div>
+                                    <h4 style={{ margin: '0 0 5px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Landmark size={18} className="text-primary" /> Ev Sahibi Olmak İstiyor
+                                    </h4>
+                                    <p style={{ fontStyle: 'normal', color: '#64748b', fontSize: '0.9rem' }}>
+                                        Bu kullanıcı evini platform üzerinden sahiplenerek yönetmek istiyor. Lütfen yüklediği tapu belgesi ile idari adresleri eşleştirip doğruluğunu kontrol edin.
+                                    </p>
+                                </div>
                             </div>
 
                             <div className="meta-info">
                                 <div className="info-item">
-                                    <User size={14} /> <span>{rev.author.email} ({rev.anonId})</span>
+                                    <User size={14} /> <span><strong>Kullanıcı:</strong> {claim.author.email}</span>
                                 </div>
                                 <div className="info-item">
-                                    <Clock size={14} /> <span>{new Date(rev.createdAt).toLocaleDateString()}</span>
+                                    <Clock size={14} /> <span><strong>Tarih:</strong> {new Date(claim.createdAt).toLocaleDateString("tr-TR")}</span>
                                 </div>
                             </div>
 
-                            {rev.verificationDoc && (
+                            {claim.verificationDoc && (
                                 <div className="doc-box">
                                     <div className="doc-header">
                                         <FileText size={18} />
-                                        <span>Yüklenen Belge: <strong>{rev.verificationDoc}</strong></span>
+                                        <span>Yüklenen Belge: <strong>{claim.verificationDoc}</strong></span>
                                     </div>
-                                    <button className="view-doc-btn">
-                                        <ExternalLink size={14} /> Belgeyi Görüntüle
-                                    </button>
+                                    <a href={`/uploads/${claim.verificationDoc}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                                        <button className="view-doc-btn">
+                                            <ExternalLink size={14} /> Belgeyi Yeni Sekmede İncele
+                                        </button>
+                                    </a>
                                 </div>
                             )}
 
                             <div className="card-actions">
-                                <button className="btn-reject" onClick={() => handleAction(rev.id, 'REJECT')}>
-                                    <XCircle size={18} /> Reddet
+                                <button className="btn-reject" onClick={() => handleAction(claim.id, 'REJECT')}>
+                                    <XCircle size={18} /> Tapuyu Reddet
                                 </button>
-                                <button className="btn-approve" onClick={() => handleAction(rev.id, 'APPROVE')}>
-                                    <CheckCircle2 size={18} /> Onayla
+                                <button className="btn-approve" onClick={() => handleAction(claim.id, 'APPROVE')}>
+                                    <CheckCircle2 size={18} /> Sahipliği Onayla
                                 </button>
                             </div>
                         </div>
@@ -137,12 +134,9 @@ export default function ModerationPage() {
         .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .house-info { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
         .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
-        .status-pill.pending { background: #fff7ed; color: #c2410c; }
         .status-pill.claim-pill { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
         
-        .review-content { background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
-        .review-content p { margin: 0; font-size: 0.95rem; line-height: 1.5; color: #334155; font-style: italic; }
-        .rating-pill { display: inline-block; margin-top: 10px; background: #fffbeb; color: #b45309; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.8rem; }
+        .claim-content { background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--primary); }
         
         .meta-info { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
         .info-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #64748b; }
@@ -150,6 +144,7 @@ export default function ModerationPage() {
         .doc-box { background: #ebf5ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 15px; margin-bottom: 20px; }
         .doc-header { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: #1e40af; margin-bottom: 10px; }
         .view-doc-btn { width: 100%; padding: 8px; background: white; border: 1px solid #bfdbfe; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; font-size: 0.8rem; color: #2563eb; }
+        .view-doc-btn:hover { background: #f8fafc; }
         
         .card-actions { display: flex; gap: 12px; margin-top: auto; }
         .card-actions button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; transition: 0.2s; }

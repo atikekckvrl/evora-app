@@ -27,11 +27,11 @@ function RecenterMap({ houses, center, zoom }) {
       if (valid.length > 0) {
         const bounds = L.latLngBounds(valid.map(h => [h.lat, h.lng]));
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: zoom || 18, animate: true });
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: zoom || 18, animate: false });
         }
       }
     } else if (center && isValidCoord(center[0], center[1])) {
-      map.setView(center, zoom || 18, { animate: true });
+      map.setView(center, zoom || 18, { animate: false });
     }
   }, [houses, center, map, zoom]);
 
@@ -68,7 +68,6 @@ export default function MapComponent({ houses = [], center, zoom, onMapClick }) 
   return (
     <div ref={containerRef} style={{ height: "100%", width: "100%", minHeight: "350px", position: "relative" }}>
       <MapContainer
-        key={`${center?.[0]}-${center?.[1]}-${houses?.length}`}
         center={[39.6484, 27.8826]}
         zoom={zoom || 13}
         maxZoom={21}

@@ -3,7 +3,7 @@ import { useParams } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
-  Star, ShieldCheck, MapPin, UserCheck, MessageSquareQuote, ArrowLeft, CheckCircle2, AlertTriangle, X, Camera
+  Star, ShieldCheck, MapPin, UserCheck, MessageSquareQuote, ArrowLeft, CheckCircle2, AlertTriangle, X, Camera, Heart
 } from "lucide-react";
 import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
@@ -37,6 +37,8 @@ export default function HouseDetailsPage() {
   const [isClaiming, setIsClaiming] = useState(false);
   const [replyingToId, setReplyingToId] = useState(null);
   const [replyText, setReplyText] = useState("");
+  const [isClaimModalOpen, setClaimModalOpen] = useState(false);
+  const [claimFile, setClaimFile] = useState(null);
 
   const handleAuthSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -120,6 +122,8 @@ export default function HouseDetailsPage() {
     desc: "Lütfen bekleyiniz..."
   });
 
+  const [isFavorited, setIsFavorited] = useState(false);
+
   useEffect(() => {
     const fetchHouse = async () => {
       try {
@@ -127,6 +131,7 @@ export default function HouseDetailsPage() {
         if (res.ok) {
           const data = await res.json();
           setHouse(data);
+          setIsFavorited(data.isFavorited || false);
         }
       } catch (err) {
         console.error("Ev verisi çekilemedi:", err);
@@ -134,6 +139,33 @@ export default function HouseDetailsPage() {
     };
     fetchHouse();
   }, [houseId]);
+
+  const toggleFavorite = async () => {
+    if (!session) {
+      setAuthMode("login");
+      setAuthModalOpen(true);
+      return;
+    }
+
+    // Optimistic UI Update
+    setIsFavorited(!isFavorited);
+
+    try {
+      const res = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ houseId })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setIsFavorited(!isFavorited); // Revert on failure
+        alert(data.error || "İşlem başarısız.");
+      }
+    } catch (err) {
+      setIsFavorited(!isFavorited); // Revert on failure
+      console.error(err);
+    }
+  };
 
   // Yorumları Çekme
   const fetchReviews = async () => {
@@ -151,22 +183,34 @@ export default function HouseDetailsPage() {
   }, [houseId]);
 
   // Evi Sahiplen
-  const claimHouse = async () => {
+  const openClaimModal = () => {
     if (!session) {
       setAuthMode("login");
       setAuthModalOpen(true);
       return;
     }
+    setClaimModalOpen(true);
+  };
 
-    if (!confirm("Evi sahiplenmek istediğinize emin misiniz?")) return;
+  const submitClaim = async () => {
+    if (!claimFile) {
+      alert("Lütfen tapu belgesini yükleyin.");
+      return;
+    }
 
     setIsClaiming(true);
     try {
-      const res = await fetch(`/api/houses/${houseId}/claim`, { method: "POST" });
+      const res = await fetch(`/api/houses/${houseId}/claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ownershipDoc: claimFile.name })
+      });
       const data = await res.json();
       if (data.success) {
-        alert("Evi başarıyla sahiplendiniz!");
+        alert("Belgeniz başarıyla alındı! Moderatör onayından sonra sahiplik rozetiniz aktifleşecektir (MVP kurgusunda anında aktifleşir).");
         setHouse(prev => ({ ...prev, ownerId: session.user.id }));
+        setClaimModalOpen(false);
+        setClaimFile(null);
       } else {
         alert(data.error || "İşlem başarısız.");
       }
@@ -249,10 +293,23 @@ export default function HouseDetailsPage() {
       <div className="container">
         <div className="house-layout-grid pt-3">
           <main className="content-side">
-            <div className="elite-header-box">
+            <div className="elite-header-box" style={{ position: 'relative' }}>
               <span className="gold-label">ADRES İNCELEMESİ</span>
               <h1 className="pro-house-title">{house.title}</h1>
               <div className="pro-location-text"><MapPin size={16} /> {house.fullAddress}</div>
+
+              <button
+                onClick={toggleFavorite}
+                style={{
+                  position: 'absolute', right: '0', top: '0', display: 'flex', alignItems: 'center', gap: '8px',
+                  background: isFavorited ? '#fef2f2' : 'white', border: `1px solid ${isFavorited ? '#fca5a5' : '#e2e8f0'}`,
+                  color: isFavorited ? '#ef4444' : '#64748b', padding: '10px 16px', borderRadius: '14px',
+                  cursor: 'pointer', transition: '0.2s', fontWeight: 'bold'
+                }}
+              >
+                <Heart size={20} fill={isFavorited ? '#ef4444' : 'none'} color={isFavorited ? '#ef4444' : '#64748b'} />
+                {isFavorited ? 'Favorilerden Çıkar' : 'Favorilere Ekle'}
+              </button>
             </div>
 
             <div className="pro-card-white mt-4">
@@ -403,11 +460,10 @@ export default function HouseDetailsPage() {
                   <>
                     <p style={{ color: "#64748b", fontSize: "0.85rem", marginBottom: "15px" }}>Evi sahiplenerek kiracı yorumlarına resmi yanıt verebilirsiniz.</p>
                     <button
-                      onClick={claimHouse}
-                      disabled={isClaiming}
+                      onClick={openClaimModal}
                       style={{ width: '100%', padding: '10px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', justifyContent: 'center', gap: '8px' }}
                     >
-                      {isClaiming ? "İşleniyor..." : "Yetkili Olarak Sahiplen"}
+                      Yetkili Olarak Sahiplen
                     </button>
                   </>
                 )}
@@ -580,6 +636,54 @@ export default function HouseDetailsPage() {
                 onClick={submitReview}
               >
                 {isSubmitting ? "Gönderiliyor..." : "Yorumu Gönder"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EV SAHİPLENME (CLAIM) MODALI */}
+      {isClaimModalOpen && (
+        <div className="review-modal-overlay" onClick={() => setClaimModalOpen(false)}>
+          <div className="review-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Evi Sahiplen</h2>
+              <button className="close-btn" onClick={() => setClaimModalOpen(false)}><X size={24} /></button>
+            </div>
+
+            <div className="anon-warning" style={{ background: '#fffbeb', borderColor: '#fef3c7' }}>
+              <ShieldCheck size={20} color="#b45309" />
+              <div>
+                <strong style={{ color: '#b45309' }}>Gizliliğiniz Önemlidir</strong>
+                <p style={{ color: '#d97706', fontSize: '0.85rem', margin: '4px 0 0 0' }}>TC Kimlik Numaranız veya imza gibi özel bilgilerinizin üzerini çizerek / karalayarak gizleyebilirsiniz. Yalnızca adınız/soyadınız ve evin adresinin okunabilir olması yeterlidir.</p>
+              </div>
+            </div>
+
+            <div className="verification-upload-box" style={{ marginBottom: '2rem' }}>
+              <Camera size={24} color="var(--a)" />
+              <div className="v-text-content">
+                <strong>Ev Tapusu Yükle (Zorunlu)</strong>
+                <p>Kayıtların güvenliği için bu evin gerçek sahibi olduğunuzu teyit etmemiz gerekmektedir.</p>
+              </div>
+              <input
+                type="file"
+                id="claim-upload-input"
+                style={{ display: 'none' }}
+                onChange={(e) => setClaimFile(e.target.files[0])}
+                accept="image/*,application/pdf"
+              />
+              <label htmlFor="claim-upload-input" className="v-btn-alt" style={{ cursor: 'pointer' }}>
+                {claimFile ? "✓ Seçildi" : "Dosya Seç"}
+              </label>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="submit-review-btn"
+                disabled={isClaiming || !claimFile}
+                onClick={submitClaim}
+              >
+                {isClaiming ? "İşleniyor..." : "Belgeyi Yükle ve Sahiplen"}
               </button>
             </div>
           </div>

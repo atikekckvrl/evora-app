@@ -21,13 +21,16 @@ export async function GET() {
 
     // Kullanıcının yorumlarını bağlı ev bilgileriyle getir
     const reviews = await prisma.review.findMany({
-      where: { authorId: user.id },
+      where: { authorId: user.id, targetType: { not: "OWNERSHIP_CLAIM" } },
       include: {
         house: {
           select: {
-            title: true,
-            location: true,
-            images: true
+            id: true,
+            district: true,
+            neighborhood: true,
+            street: true,
+            buildingNo: true,
+            flatNo: true
           }
         }
       },

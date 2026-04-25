@@ -11,26 +11,18 @@ export async function GET(req) {
             return NextResponse.json({ error: "Yetkisiz erişim. Bu alan sadece yöneticiler içindir." }, { status: 403 });
         }
 
-        const pendingReviews = await prisma.review.findMany({
+        const pendingClaims = await prisma.review.findMany({
             where: {
-                AND: [
-                    {
-                        OR: [
-                            { status: "PENDING" },
-                            { verificationDoc: { not: null }, isVerified: false }
-                        ]
-                    },
-                    {
-                        targetType: { not: "OWNERSHIP_CLAIM" }
-                    }
-                ]
+                status: "PENDING",
+                targetType: "OWNERSHIP_CLAIM"
             },
             include: {
                 house: {
                     select: {
                         title: true,
                         neighborhood: true,
-                        district: true
+                        district: true,
+                        addressKey: true
                     }
                 },
                 author: {
@@ -43,7 +35,7 @@ export async function GET(req) {
             orderBy: { createdAt: 'desc' }
         });
 
-        return NextResponse.json(pendingReviews);
+        return NextResponse.json(pendingClaims);
     } catch (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

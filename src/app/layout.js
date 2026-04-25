@@ -69,7 +69,7 @@ function NavbarContent() {
                     </Link>
                   )}
 
-                  <Link href="/profile" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
+                  <Link href="/favorites" className="dropdown-item" onClick={() => setIsMenuOpen(false)}>
                     <Heart size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Favorilerim
                   </Link>
                   <button onClick={() => { signOut(); setIsMenuOpen(false); }} className="dropdown-item logout-red">Çıkış Yap</button>

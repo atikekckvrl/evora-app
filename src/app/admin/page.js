@@ -1,28 +1,32 @@
 "use client";
-import { useState } from "react";
-import { ShieldCheck, AlertTriangle, Check, X, Trash2, User, MessageSquare } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ShieldCheck, AlertTriangle, Check, X, Trash2, User, MessageSquare, Home } from "lucide-react";
 
 export default function AdminPage() {
-  const [pendingReviews, setPendingReviews] = useState([
-    { 
-      id: 1, 
-      user: "Kiracı #A01", 
-      house: "Kadıköy, Moda Sk. No:12", 
-      content: "Harika bir ev, sadece banyo biraz eski.", 
-      verified: true 
-    },
-    { 
-      id: 2, 
-      user: "Ev Sahibi #B45", 
-      house: "Beşiktaş, Ihlamurdere No:4", 
-      content: "Kiracı son derece dürüst bir insandı, evi tertemiz bıraktı.", 
-      verified: false 
-    },
-  ]);
+  const [houses, setHouses] = useState([]);
+  const [selectedHouseId, setSelectedHouseId] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  useEffect(() => {
+    fetch('/api/houses').then(res => res.json()).then(data => {
+      if (Array.isArray(data)) setHouses(data);
+    });
+  }, []);
 
-  const handleAction = (id, action) => {
-    setPendingReviews(pendingReviews.filter(r => r.id !== id));
-    alert(`Yorum ${action === 'approve' ? 'onaylandı' : 'reddedildi'}!`);
+  const handleDeleteHouse = async (id) => {
+    if (!confirm("Bu evi platformdan silmek istediğinize emin misiniz? İçindeki tüm yorumlar da silinecektir!")) return;
+
+    try {
+      const res = await fetch(`/api/houses/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setHouses(houses.filter(h => h.id !== id));
+        setSelectedHouseId("");
+        alert("Ev başarıyla silindi ve haritadan kaldırıldı.");
+      } else {
+        alert("Ev silinirken hata oluştu.");
+      }
+    } catch (err) {
+      alert("Hata oluştu.");
+    }
   };
 
   return (
@@ -34,45 +38,80 @@ export default function AdminPage() {
         </div>
         <div className="stats-grid">
           <div className="stat-card">
-            <span className="stat-val">{pendingReviews.length}</span>
-            <span className="stat-label">Bekleyen Yorum</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-val">1.2K</span>
-            <span className="stat-label">Toplam Yorum</span>
+            <span className="stat-val">{houses.length}</span>
+            <span className="stat-label">Kayıtlı Ev</span>
           </div>
         </div>
       </div>
 
-      <div className="moderation-queue">
-        <h2>Onay Bekleyenler</h2>
-        {pendingReviews.length === 0 ? (
+      <div className="moderation-queue" style={{ marginTop: '1rem' }}>
+        <h2>Sistemdeki Kayıtlı Evleri Yönet</h2>
+        <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>Evin tüm özelliklerini görüntüleyip inceleyebilir, haritadan kaldırmak istediğiniz evi kalıcı olarak silebilirsiniz.</p>
+
+        <div style={{ marginBottom: '25px' }}>
+          <input
+            type="text"
+            placeholder="Arama yap: İlçe, Mahalle, Sokak Adı veya Puan girin..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '14px 20px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '1rem', outline: 'none', transition: 'all 0.3s' }}
+          />
+        </div>
+
+        {houses.filter(h => h.title.toLowerCase().includes(searchTerm.toLowerCase()) || h.fullAddress.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
           <div className="empty-state card">
-            <Check size={48} className="text-success mb-1" />
-            <p>Tüm yorumlar incelendi. Harika iş!</p>
+            <Home size={48} className="text-muted mb-1" />
+            <p>{searchTerm ? "Bu aramaya uygun bir ev bulunamadı." : "Sistemde henüz kayıtlı bir mülk bulunmuyor."}</p>
           </div>
         ) : (
-          <div className="queue-list">
-            {pendingReviews.map(review => (
-              <div key={review.id} className="queue-item card fade-in">
-                <div className="item-main">
-                  <div className="item-meta">
-                    <span className="item-user"><User size={14}/> {review.user}</span>
-                    <span className="item-house"><AlertTriangle size={14} className="text-warning" /> {review.house}</span>
-                    {review.verified && <span className="badge-verified-tiny">Belge Sunuldu</span>}
+          <div className="queue-list grid-2-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            {houses.filter(h => h.title.toLowerCase().includes(searchTerm.toLowerCase()) || h.fullAddress.toLowerCase().includes(searchTerm.toLowerCase())).map(house => (
+              <div key={house.id} className="queue-item card" style={{ flexDirection: 'column', alignItems: 'flex-start', padding: '20px', position: 'relative' }}>
+                <div className="item-main" style={{ width: '100%', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '15px' }}>
+                    <div style={{ background: '#f1f5f9', padding: '10px', borderRadius: '12px' }}>
+                      <Home size={24} className="text-primary" />
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '1.1rem', display: 'block', color: 'var(--text-main)' }}>{house.title}</strong>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        {new Date(house.createdAt).toLocaleDateString("tr-TR")} tarihinde eklendi
+                      </span>
+                    </div>
                   </div>
-                  <p className="item-content">"{review.content}"</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                    <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Tam Adres</strong>
+                      <span>{house.fullAddress}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
+                      <span style={{ color: '#64748b' }}>Değerlendirme Puanı:</span>
+                      <strong style={{ color: '#b4975a' }}>⭐ {house.rating} ({house.reviews} Doğrulanmış Yorum)</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0' }}>
+                      <span style={{ color: '#64748b' }}>Ev Sahibi Durumu:</span>
+                      {house.ownerId ? <strong style={{ color: '#10b981' }}>Sahiplenildi</strong> : <strong style={{ color: '#f59e0b' }}>Sahipsiz (Anonim)</strong>}
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="item-actions">
-                  <button className="admin-btn btn-success" onClick={() => handleAction(review.id, 'approve')}>
-                    <Check size={18} /> Onayla
-                  </button>
-                  <button className="admin-btn btn-danger" onClick={() => handleAction(review.id, 'reject')}>
-                    <X size={18} /> Reddet
-                  </button>
-                  <button className="admin-btn btn-outline-danger" onClick={() => handleAction(review.id, 'delete')}>
-                    <Trash2 size={18} />
+
+                <div className="item-actions" style={{ marginLeft: 0, width: '100%', display: 'flex', gap: '10px' }}>
+                  <a
+                    href={`/house/${house.id}`}
+                    target="_blank"
+                    style={{ flex: 1, padding: '10px', background: '#f1f5f9', color: '#334155', borderRadius: '8px', fontWeight: 'bold', textDecoration: 'none', textAlign: 'center', transition: '0.2s', fontSize: '0.9rem' }}
+                  >
+                    Detaylı İncele
+                  </a>
+                  <button
+                    className="admin-btn btn-danger"
+                    onClick={() => handleDeleteHouse(house.id)}
+                    style={{ flex: 1, justifyContent: 'center' }}
+                  >
+                    <Trash2 size={16} /> Haritadan Sil
                   </button>
                 </div>
               </div>
@@ -81,7 +120,8 @@ export default function AdminPage() {
         )}
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .admin-header {
           display: flex;
           justify-content: space-between;

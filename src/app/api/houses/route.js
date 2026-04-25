@@ -95,7 +95,7 @@ export async function GET(req) {
     const houses = await prisma.house.findMany({
       include: {
         reviews: {
-          where: { targetType: "HOUSE" },
+          where: { targetType: "HOUSE", isVerified: true },
           select: { overallRating: true }
         }
       },
@@ -122,6 +122,9 @@ export async function GET(req) {
         id: house.id,
         title: `${house.district}, ${house.neighborhood}`,
         location: house.district,
+        fullAddress: `${house.neighborhood} Mah. ${house.street} Sok. No:${house.buildingNo} D:${house.flatNo} ${house.city}`,
+        ownerId: house.ownerId,
+        createdAt: house.createdAt,
         rating: parseFloat(avgRating),
         reviews: reviewCount,
         lat,

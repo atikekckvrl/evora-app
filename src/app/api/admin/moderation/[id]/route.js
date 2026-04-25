@@ -17,6 +17,8 @@ export async function PATCH(req, { params }) {
         const { action } = body; // 'APPROVE' or 'REJECT'
 
         if (action === "APPROVE") {
+            const existingReview = await prisma.review.findUnique({ where: { id: id } });
+
             const review = await prisma.review.update({
                 where: { id: id },
                 data: {
@@ -24,6 +26,15 @@ export async function PATCH(req, { params }) {
                     isVerified: true // Belge onaylandığı için doğrulanmış sayıyoruz
                 }
             });
+
+            // Eğer onaylanan şey bir Ev Sahiplenme Talebi ise, Ev tablosunu da güncelle
+            if (existingReview && existingReview.targetType === "OWNERSHIP_CLAIM") {
+                await prisma.house.update({
+                    where: { id: existingReview.houseId },
+                    data: { ownerId: existingReview.authorId }
+                });
+            }
+
             return NextResponse.json({ success: true, review });
         } else if (action === "REJECT") {
             const review = await prisma.review.update({

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { 
+import {
   User, MessageSquare, Settings, Star, Calendar, MapPin, Trash2, ArrowRight
 } from "lucide-react";
 
@@ -52,7 +52,7 @@ export default function MyReviewsPage() {
   return (
     <div className="profile-container-ultra">
       <div className="profile-header-gradient"></div>
-      
+
       <div className="container profile-page-wrapper">
         <div className="unified-dashboard-card">
           {/* SIDEBAR */}
@@ -68,17 +68,17 @@ export default function MyReviewsPage() {
             </div>
 
             <nav className="dashboard-nav">
-               <div onClick={() => router.push("/profile")} className="d-nav-item">
-                 <User size={20} /> <span>Profilim</span>
-               </div>
-               <div onClick={() => router.push("/my-reviews")} className="d-nav-item active">
-                 <MessageSquare size={20} /> 
-                 <span>Yorumlarım</span>
-                 {reviews.length > 0 && <span className="nav-badge-pill">{reviews.length}</span>}
-               </div>
-               <div onClick={() => router.push("/profile/settings")} className="d-nav-item">
-                 <Settings size={20} /> <span>Hesap Ayarları</span>
-               </div>
+              <div onClick={() => router.push("/profile")} className="d-nav-item">
+                <User size={20} /> <span>Profilim</span>
+              </div>
+              <div onClick={() => router.push("/my-reviews")} className="d-nav-item active">
+                <MessageSquare size={20} />
+                <span>Yorumlarım</span>
+                {reviews.length > 0 && <span className="nav-badge-pill">{reviews.length}</span>}
+              </div>
+              <div onClick={() => router.push("/profile/settings")} className="d-nav-item">
+                <Settings size={20} /> <span>Hesap Ayarları</span>
+              </div>
             </nav>
           </aside>
 
@@ -107,24 +107,27 @@ export default function MyReviewsPage() {
                     <div key={review.id} className="review-item-card">
                       <div className="review-card-header">
                         <div className="house-mini-info">
-                           <strong>{review.house.title}</strong>
-                           <span className="location-tag"><MapPin size={12}/> {review.house.location}</span>
+                          <strong>{review.house.district}, {review.house.neighborhood}</strong>
+                          <span className="location-tag"><MapPin size={12} /> {review.house.street} Sok. No:{review.house.buildingNo} D:{review.house.flatNo}</span>
                         </div>
                         <div className="rating-pill-pro">
-                           <Star size={14} fill="#f59e0b" color="#f59e0b" />
-                           <span>{review.rating}.0</span>
+                          <Star size={14} fill="#f59e0b" color="#f59e0b" />
+                          <span>{review.overallRating > 0 ? review.overallRating : '—'}</span>
                         </div>
                       </div>
-                      
+
                       <div className="review-card-body">
-                        <p>"{review.comment}"</p>
+                        <p>"{review.content}"</p>
                       </div>
 
                       <div className="review-card-footer">
                         <span className="review-date">
-                          <Calendar size={12}/> {new Date(review.createdAt).toLocaleDateString('tr-TR')}
+                          <Calendar size={12} /> {new Date(review.createdAt).toLocaleDateString('tr-TR')}
                         </span>
-                        <button className="btn-delete-review"><Trash2 size={16}/></button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {review.isVerified && <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>✓ Doğrulanmış</span>}
+                          {review.status === 'PENDING' && <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 'bold' }}>Onay Bekliyor</span>}
+                        </div>
                       </div>
                     </div>
                   ))}

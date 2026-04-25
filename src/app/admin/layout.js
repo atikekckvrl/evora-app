@@ -8,7 +8,9 @@ export default function AdminLayout({ children }) {
   const pathname = usePathname();
 
   const navItems = [
+    { name: "Ev Yönetimi", href: "/admin", icon: Home },
     { name: "Yorum Moderasyonu", href: "/admin/moderation", icon: MessageSquareQuote },
+    { name: "Ev Sahibi Onayları", href: "/admin/claims", icon: ShieldCheck },
     { name: "Kullanıcı Yönetimi", href: "/admin/users", icon: Users },
   ];
 
